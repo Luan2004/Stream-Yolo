@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Demo 3 Model YOLO API - Video Output</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    .container {
+      max-width: 1150px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 32px;
+      color: #ffffff;
+    }
+
+    .header p {
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #ffffff;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="file"],
+    select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: #e5e7eb;
+      margin-bottom: 16px;
+    }
+
+    input[type="file"] {
+      cursor: pointer;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .secondary {
+      background: #334155;
+    }
+
+    .secondary:hover {
+      background: #475569;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #020617;
+      color: #cbd5e1;
+      font-size: 14px;
+      min-height: 44px;
+      white-space: pre-wrap;
+    }
+
+    .preview-box {
+      margin-top: 16px;
+    }
+
+    video,
+    img {
+      width: 100%;
+      max-height: 520px;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #020617;
+      border: 1px solid #1f2937;
+    }
+
+    .result-placeholder {
+      height: 360px;
+      border-radius: 12px;
+      border: 1px dashed #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      background: #020617;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .small-note {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 850px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Demo API 3 Model YOLO</h1>
+      <p>Upload video .mp4 → gọi API → nhận video đã đánh dấu box và label</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Cấu hình gọi API</h2>
+
+        <label>Chế độ xử lý</label>
+        <select id="mode" onchange="changeMode()">
+          <option value="video" selected>Trả về video đã label</option>
+          <option value="snapshot">Trả về 1 ảnh snapshot</option>
+        </select>
+
+        <label>API URL</label>
+        <input
+          id="apiUrl"
+          type="text"
+          value="http://127.0.0.1:8000/detect/video"
+        />
+
+        <label>Chọn video .mp4</label>
+        <input
+          id="videoFile"
+          type="file"
+          accept="video/mp4,video/*"
+        />
+
+        <div class="row">
+          <div>
+            <label>Confidence</label>
+            <input
+              id="conf"
+              type="number"
+              value="0.4"
+              min="0"
+              max="1"
+              step="0.05"
+            />
+          </div>
+
+          <div id="everyNBox">
+            <label>Every N Frames</label>
+            <input
+              id="everyNFrames"
+              type="number"
+              value="1"
+              min="1"
+            />
+          </div>
+
+          <div id="frameIndexBox" class="hidden">
+            <label>Frame index</label>
+            <input
+              id="frameIndex"
+              type="number"
+              value="0"
+              min="0"
+            />
+          </div>
+        </div>
+
+        <button id="btnDetect" onclick="sendToApi()">
+          Gửi video vào API
+        </button>
+
+        <div class="actions">
+          <button class="secondary" onclick="setFrameFromVideoTime()">
+            Lấy frame từ thời gian video
+          </button>
+
+          <button class="secondary" onclick="resetUI()">
+            Xóa kết quả
+          </button>
+        </div>
+
+        <div id="status" class="status">
+          Chưa gửi request.
+        </div>
+
+        <div class="small-note">
+          Với chế độ video, every_n_frames = 1 sẽ vẽ box trên mọi frame nhưng xử lý chậm hơn.
+          Khi demo có thể dùng 3 hoặc 5 để xử lý nhanh hơn.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Video đầu vào</h2>
+
+        <div class="preview-box">
+          <video id="videoPreview" controls></video>
+        </div>
+
+        <h2 id="resultTitle" style="margin-top: 24px;">Video kết quả từ API</h2>
+
+        <div id="resultBox" class="result-placeholder">
+          Video đã đánh dấu box và label sẽ hiển thị ở đây
+        </div>
+
+        <div id="downloadBox" style="display:none; margin-top: 12px;">
+          <a id="downloadLink" download="labeled_video.mp4">
+            <button type="button">Tải kết quả</button>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const videoFileInput = document.getElementById("videoFile");
+    const videoPreview = document.getElementById("videoPreview");
+    const statusBox = document.getElementById("status");
+    const resultBox = document.getElementById("resultBox");
+    const resultTitle = document.getElementById("resultTitle");
+    const downloadBox = document.getElementById("downloadBox");
+    const downloadLink = document.getElementById("downloadLink");
+    const btnDetect = document.getElementById("btnDetect");
+
+    let selectedFile = null;
+    let lastResultUrl = null;
+
+    videoFileInput.addEventListener("change", function () {
+      const file = this.files[0];
+
+      if (!file) {
+        selectedFile = null;
+        videoPreview.removeAttribute("src");
+        return;
+      }
+
+      selectedFile = file;
+
+      const videoUrl = URL.createObjectURL(file);
+      videoPreview.src = videoUrl;
+
+      statusBox.textContent =
+        "Đã chọn video: " + file.name + "\n" +
+        "Dung lượng: " + (file.size / 1024 / 1024).toFixed(2) + " MB";
+    });
+
+    function changeMode() {
+      const mode = document.getElementById("mode").value;
+      const apiUrl = document.getElementById("apiUrl");
+      const everyNBox = document.getElementById("everyNBox");
+      const frameIndexBox = document.getElementById("frameIndexBox");
+
+      resetUI();
+
+      if (mode === "video") {
+        apiUrl.value = "http://127.0.0.1:8000/detect/video";
+        everyNBox.classList.remove("hidden");
+        frameIndexBox.classList.add("hidden");
+        resultTitle.textContent = "Video kết quả từ API";
+        downloadLink.download = "labeled_video.mp4";
+      } else {
+        apiUrl.value = "http://127.0.0.1:8000/detect/snapshot";
+        everyNBox.classList.add("hidden");
+        frameIndexBox.classList.remove("hidden");
+        resultTitle.textContent = "Ảnh kết quả từ API";
+        downloadLink.download = "labeled_snapshot.jpg";
+      }
+    }
+
+    function setFrameFromVideoTime() {
+      if (!videoPreview.duration) {
+        statusBox.textContent = "Hãy chọn video trước.";
+        return;
+      }
+
+      const estimatedFps = 30;
+      const frameIndex = Math.floor(videoPreview.currentTime * estimatedFps);
+
+      document.getElementById("frameIndex").value = frameIndex;
+      document.getElementById("mode").value = "snapshot";
+      changeMode();
+      document.getElementById("frameIndex").value = frameIndex;
+
+      statusBox.textContent =
+        "Đã chuyển sang chế độ snapshot.\n" +
+        "currentTime = " + videoPreview.currentTime.toFixed(2) + "s\n" +
+        "frame_index ≈ " + frameIndex;
+    }
+
+    async function sendToApi() {
+      const mode = document.getElementById("mode").value;
+      const apiUrl = document.getElementById("apiUrl").value.trim();
+      const conf = document.getElementById("conf").value;
+      const everyNFrames = document.getElementById("everyNFrames").value;
+      const frameIndex = document.getElementById("frameIndex").value;
+
+      if (!apiUrl) {
+        statusBox.textContent = "Thiếu API URL.";
+        return;
+      }
+
+      if (!selectedFile) {
+        statusBox.textContent = "Bạn chưa chọn video.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("conf", conf);
+
+      if (mode === "video") {
+        formData.append("every_n_frames", everyNFrames);
+      } else {
+        formData.append("frame_index", frameIndex);
+      }
+
+      btnDetect.disabled = true;
+      btnDetect.textContent = "Đang xử lý...";
+      statusBox.textContent =
+        "Đang upload video và chờ API xử lý...\n" +
+        "Nếu video dài hoặc chạy 3 model, bước này có thể khá lâu.";
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          let errorText = await response.text();
+          throw new Error("API lỗi " + response.status + ":\n" + errorText);
+        }
+
+        const blob = await response.blob();
+
+        if (lastResultUrl) {
+          URL.revokeObjectURL(lastResultUrl);
+        }
+
+        lastResultUrl = URL.createObjectURL(blob);
+
+        resultBox.className = "";
+
+        if (mode === "video") {
+          resultBox.innerHTML = `
+            <video src="${lastResultUrl}" controls autoplay muted></video>
+          `;
+          downloadLink.download = "labeled_video.mp4";
+          statusBox.textContent =
+            "Xử lý video thành công!\n" +
+            "Confidence: " + conf + "\n" +
+            "Every N Frames: " + everyNFrames;
+        } else {
+          resultBox.innerHTML = `
+            <img src="${lastResultUrl}" alt="Ảnh đã label từ API" />
+          `;
+          downloadLink.download = "labeled_snapshot.jpg";
+          statusBox.textContent =
+            "Xử lý snapshot thành công!\n" +
+            "Frame index: " + frameIndex + "\n" +
+            "Confidence: " + conf;
+        }
+
+        downloadLink.href = lastResultUrl;
+        downloadBox.style.display = "block";
+
+      } catch (err) {
+        console.error(err);
+        statusBox.textContent =
+          "Gọi API thất bại.\n\n" +
+          err.message + "\n\n" +
+          "Kiểm tra:\n" +
+          "1. API đã chạy chưa?\n" +
+          "2. URL có đúng không?\n" +
+          "3. Backend đã bật CORS chưa?\n" +
+          "4. File video có đọc được không?\n" +
+          "5. Model best_fire.pt / best_fall.pt có đúng đường dẫn không?";
+      } finally {
+        btnDetect.disabled = false;
+        btnDetect.textContent = "Gửi video vào API";
+      }
+    }
+
+    function resetUI() {
+      if (lastResultUrl) {
+        URL.revokeObjectURL(lastResultUrl);
+        lastResultUrl = null;
+      }
+
+      const mode = document.getElementById("mode").value;
+
+      resultBox.className = "result-placeholder";
+      resultBox.innerHTML = mode === "video"
+        ? "Video đã đánh dấu box và label sẽ hiển thị ở đây"
+        : "Ảnh đã đánh dấu box và label sẽ hiển thị ở đây";
+
+      downloadBox.style.display = "none";
+      statusBox.textContent = "Đã xóa kết quả.";
+    }
+  </script>
+</body>
+</html>

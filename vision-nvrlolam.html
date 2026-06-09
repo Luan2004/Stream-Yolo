@@ -1,0 +1,3334 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vision NVR — Inference Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ─── VARIABLES ──────────────────────────────────────────────── */
+:root {
+  --accent:#4ade80; --accent-dim:#22c55e33; --accent-border:#16a34a;
+  --red:#f87171; --yellow:#fbbf24; --blue:#60a5fa; --purple:#a78bfa;
+  --font-mono:'IBM Plex Mono',monospace; --font-sans:'IBM Plex Sans',sans-serif;
+  --radius:4px; --header-h:48px;
+}
+[data-theme="dark"] {
+  --bg:#0d0f0f; --bg2:#141717; --bg3:#1c2020; --bg4:#242929;
+  --border:#2a3030; --border2:#3a4545;
+  --text:#e2e8e8; --text2:#94a3a3; --text3:#5a6e6e;
+  --shadow:0 2px 16px #00000066;
+}
+[data-theme="light"] {
+  --bg:#f0f4f4; --bg2:#ffffff; --bg3:#e8eeee; --bg4:#dce5e5;
+  --border:#c8d5d5; --border2:#b0c0c0;
+  --text:#1a2626; --text2:#4a6060; --text3:#8aa0a0;
+  --shadow:0 2px 16px #00000018;
+}
+/* ─── RESET ──────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font-sans);font-size:13px;background:var(--bg);color:var(--text);display:flex;flex-direction:column;overflow:hidden}
+button{cursor:pointer;font-family:inherit;font-size:inherit}
+input,select,textarea{font-family:var(--font-mono);font-size:12px}
+a{color:var(--accent);text-decoration:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* ─── HEADER ─────────────────────────────────────────────────── */
+#header{height:var(--header-h);background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:100}
+.logo{font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--accent);
+  letter-spacing:.05em;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--accent-dim)}50%{box-shadow:0 0 0 4px var(--accent-dim)}}
+.header-nav{display:flex;gap:2px;margin-left:20px}
+.nav-btn{padding:5px 12px;border:none;background:transparent;color:var(--text2);
+  border-radius:var(--radius);font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;transition:all .15s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.status-pill{display:flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--border);
+  border-radius:20px;font-family:var(--font-mono);font-size:10px;color:var(--text2);white-space:nowrap}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.status-dot.ok{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.status-dot.err{background:var(--red)}
+.theme-toggle{width:30px;height:30px;border:1px solid var(--border);border-radius:var(--radius);
+  background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:all .15s}
+.theme-toggle:hover{background:var(--bg3);color:var(--text)}
+.host-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:4px 8px;width:170px}
+.host-input:focus{outline:none;border-color:var(--accent)}
+.btn-connect{padding:4px 12px;background:var(--accent);color:#0d0f0f;border:none;
+  border-radius:var(--radius);font-family:var(--font-mono);font-size:11px;font-weight:600;transition:opacity .15s}
+.btn-connect:hover{opacity:.85}
+/* ─── MAIN ───────────────────────────────────────────────────── */
+#main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+/* ─── BUTTONS ────────────────────────────────────────────────── */
+.btn{padding:7px 16px;border-radius:var(--radius);border:none;font-family:var(--font-mono);
+  font-size:11px;font-weight:600;letter-spacing:.03em;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--accent);color:#0a0f0a}
+.btn-primary:hover{opacity:.85}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid #f8717144}
+.btn-danger:hover{background:#f8717122}
+.btn-full{width:100%}
+.btn-row{display:flex;gap:8px}
+/* ─── PANELS ─────────────────────────────────────────────────── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.panel-header{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg3)}
+.panel-title{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.06em;text-transform:uppercase}
+.panel-body{padding:14px}
+/* ─── PAGES ──────────────────────────────────────────────────── */
+.page{display:none;flex-direction:column;gap:12px}
+.page.active{display:flex}
+/* ─── DETECT ─────────────────────────────────────────────────── */
+.detect-grid{display:grid;grid-template-columns:1fr 380px;gap:12px}
+@media(max-width:1100px){.detect-grid{grid-template-columns:1fr}}
+.dropzone{border:2px dashed var(--border2);border-radius:var(--radius);min-height:480px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:var(--text3);cursor:pointer;transition:all .2s;background:var(--bg3)}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.dropzone-icon{font-size:32px;opacity:.4}
+.dropzone-text{font-family:var(--font-mono);font-size:12px}
+.dropzone-sub{font-size:11px;opacity:.6}
+#canvas-wrap{position:relative;display:none;border-radius:var(--radius);overflow:hidden;background:#000;width:100%}
+#preview-canvas{display:block;max-width:100%;max-height:720px}
+#overlay-canvas{position:absolute;top:0;left:0;pointer-events:none}
+.param-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.param-label{font-family:var(--font-mono);font-size:11px;color:var(--text2);width:72px;flex-shrink:0}
+.param-input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:5px 8px}
+.param-input:focus{outline:none;border-color:var(--accent)}
+select.param-input option{background:var(--bg2)}
+.results-list{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
+.result-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--accent)}
+.result-cat{font-family:var(--font-mono);font-size:11px;font-weight:600;min-width:80px}
+.result-score{font-family:var(--font-mono);font-size:10px;background:var(--bg4);
+  padding:2px 5px;border-radius:2px;color:var(--text2)}
+.result-bbox{font-family:var(--font-mono);font-size:10px;color:var(--text3);
+  flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.source-badge{font-family:var(--font-mono);font-size:9px;background:#a78bfa22;
+  color:var(--purple);padding:1px 5px;border-radius:2px}
+.seg-badge{font-family:var(--font-mono);font-size:9px;background:#60a5fa22;
+  color:var(--blue);padding:1px 5px;border-radius:2px}
+.infer-stats{display:flex;gap:10px;flex-wrap:wrap}
+.infer-stat{font-family:var(--font-mono);font-size:10px;color:var(--text3)}
+.infer-stat span{color:var(--accent)}
+/* ─── STREAM GRID ────────────────────────────────────────────── */
+.stream-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  padding:10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)}
+.stream-toolbar-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.1em}
+.layout-btns{display:flex;gap:3px}
+.layout-btn{padding:3px 10px;border:1px solid var(--border);background:transparent;
+  color:var(--text3);border-radius:var(--radius);font-family:var(--font-mono);font-size:10px;transition:all .15s}
+.layout-btn:hover{border-color:var(--accent);color:var(--accent)}
+.layout-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-border)}
+.stream-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+/* ─── STREAM TILE ────────────────────────────────────────────── */
+.stream-tile{background:#0a0c0c;border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;transition:border-color .2s}
+.stream-tile.live-border{border-color:var(--accent-border)}
+.tile-canvas-wrap{position:relative;background:#060808;min-height:140px}
+.tile-canvas{display:block;width:100%;height:auto}
+.tile-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;color:var(--text3);
+  font-family:var(--font-mono);font-size:11px}
+.tile-placeholder .spin{font-size:20px;animation:spin 1.2s linear infinite;display:inline-block}
+.tile-status-bar{position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;gap:6px;pointer-events:none}
+.live-badge{background:#f87171ee;color:#fff;font-family:var(--font-mono);font-size:9px;
+  font-weight:600;padding:2px 7px;border-radius:2px;display:flex;align-items:center;gap:4px}
+.live-badge::before{content:'●';animation:blink 1s infinite}
+.fps-badge{font-family:var(--font-mono);font-size:9px;color:#ffffffcc;
+  background:#00000099;padding:2px 7px;border-radius:2px;margin-left:auto}
+.tile-det-badge{position:absolute;bottom:8px;left:8px;font-family:var(--font-mono);
+  font-size:9px;color:var(--accent);background:#00000099;padding:2px 7px;border-radius:2px;pointer-events:none}
+.tile-stop-btn{position:absolute;bottom:8px;right:8px;padding:3px 10px;background:#f8717199;
+  color:#fff;border:none;border-radius:var(--radius);font-family:var(--font-mono);font-size:9px;
+  font-weight:600;transition:background .15s}
+.tile-stop-btn:hover{background:#f87171cc}
+.tile-footer{padding:7px 10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--bg2)}
+.tile-name{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text);flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile-model-tag{font-family:var(--font-mono);font-size:9px;color:var(--accent);
+  border:1px solid var(--accent-border);padding:1px 6px;border-radius:2px;background:var(--accent-dim)}
+.stream-empty{grid-column:1/-1;padding:60px;text-align:center;color:var(--text3);
+  font-family:var(--font-mono);font-size:12px}
+.stream-empty .empty-icon{font-size:36px;margin-bottom:10px;opacity:.3}
+/* ─── TILE SIDEBAR TOGGLE ────────────────────────────────── */
+.tile-sidebar {
+  transition: width .2s ease, opacity .2s ease;
+}
+.tile-sidebar.collapsed {
+  width: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+}
+.tile-sb-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  background: #00000066;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  transition: background .15s, color .15s;
+  line-height: 1;
+}
+.tile-sb-toggle:hover {
+  background: var(--bg3);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+/* ─── MODELS PAGE ────────────────────────────────────────────── */
+.models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.model-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px;transition:border-color .15s}
+.model-card:hover{border-color:var(--border2)}
+.model-card-title{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text)}
+.model-card-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.model-card-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.badge{font-family:var(--font-mono);font-size:9px;padding:2px 6px;border-radius:2px;border:1px solid}
+.badge-green{color:var(--accent);border-color:var(--accent-border);background:var(--accent-dim)}
+.badge-yellow{color:var(--yellow);border-color:#f59e0b44;background:#f59e0b11}
+.badge-red{color:var(--red);border-color:#f8717144;background:#f8717111}
+.badge-blue{color:var(--blue);border-color:#60a5fa44;background:#60a5fa11}
+.badge-purple{color:var(--purple);border-color:#a78bfa44;background:#a78bfa11}
+/* ─── UPLOAD ─────────────────────────────────────────────────── */
+.upload-dropzone{border:2px dashed var(--border2);border-radius:var(--radius);padding:28px;
+  text-align:center;cursor:pointer;color:var(--text3);transition:all .2s;font-family:var(--font-mono);font-size:12px}
+.upload-dropzone:hover,.upload-dropzone.drag{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.checkbox-row{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--text2)}
+.checkbox-row input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px}
+.progress-bar-wrap{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;display:none}
+.progress-bar{height:100%;background:var(--accent);transition:width .3s}
+/* ─── ENSEMBLE ───────────────────────────────────────────────── */
+.ens-steps{display:flex;flex-direction:column;gap:5px}
+.ens-step{display:flex;align-items:center;gap:8px;padding:7px 12px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius)}
+.ens-step-label{font-family:var(--font-mono);font-size:11px;color:var(--text);flex:1}
+.ens-step-ver{font-family:var(--font-mono);font-size:10px;color:var(--text3)}
+.ens-step-remove{width:20px;height:20px;border:none;background:transparent;color:var(--red);
+  cursor:pointer;border-radius:2px;font-size:13px;display:flex;align-items:center;justify-content:center;opacity:.6}
+.ens-step-remove:hover{opacity:1;background:#f8717122}
+/* ─── CONFIG / SYSTEM ────────────────────────────────────────── */
+.code-editor{width:100%;min-height:200px;background:var(--bg);border:1px solid var(--border);
+  color:var(--accent);font-family:var(--font-mono);font-size:12px;padding:12px;
+  border-radius:var(--radius);resize:vertical;line-height:1.6}
+.code-editor:focus{outline:none;border-color:var(--accent)}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.health-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.health-card-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.health-card-value{font-family:var(--font-mono);font-size:20px;font-weight:600}
+.health-card-value.ok{color:var(--accent)}
+.health-card-value.warn{color:var(--yellow)}
+.health-card-value.err{color:var(--red)}
+.gpu-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px}
+.gpu-table th{text-align:left;padding:6px 10px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)}
+.gpu-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.gpu-table tr:last-child td{border-bottom:none}
+.gpu-table tr:hover td{background:var(--bg3)}
+/* ─── SYSTEM MONITOR ─────────────────────────────────────────── */
+.sysmon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:10px}
+.sysmon-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px}
+.sysmon-card-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.sysmon-card-val{font-family:var(--font-mono);font-size:20px;font-weight:600;color:var(--accent);line-height:1}
+.sysmon-card-sub{font-family:var(--font-mono);font-size:10px;color:var(--text2);margin:4px 0 6px}
+.sysmon-bar-wrap{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-bottom:2px}
+.sysmon-bar{height:100%;border-radius:2px;transition:width .6s}
+.sysmon-bar.ok{background:var(--accent)}
+.sysmon-bar.warn{background:var(--yellow)}
+.sysmon-bar.crit{background:var(--red)}
+.triton-stats-tbl{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px}
+.triton-stats-tbl th{text-align:left;padding:5px 8px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)}
+.triton-stats-tbl td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+.triton-stats-tbl tr:last-child td{border-bottom:none}
+.triton-stats-tbl tr:hover td{background:var(--bg3)}
+/* ─── LABELS EDITOR ──────────────────────────────────────────── */
+.labels-list{display:flex;flex-direction:column;gap:5px;max-height:320px;overflow-y:auto}
+.label-item{display:flex;align-items:center;gap:6px}
+.label-id{width:34px;text-align:center;font-family:var(--font-mono);font-size:10px;
+  color:var(--text3);background:var(--bg4);border-radius:var(--radius);padding:4px;flex-shrink:0}
+.label-input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius);padding:5px 8px;font-family:var(--font-mono);font-size:11px}
+.label-input:focus{outline:none;border-color:var(--accent)}
+.label-del-btn{width:22px;height:22px;border:none;background:transparent;color:var(--red);
+  cursor:pointer;border-radius:2px;font-size:13px;display:flex;align-items:center;justify-content:center;
+  opacity:.5;flex-shrink:0}
+.label-del-btn:hover{opacity:1;background:#f8717122}
+/* ─── TOAST ──────────────────────────────────────────────────── */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 16px;border-radius:var(--radius);font-family:var(--font-mono);font-size:11px;
+  display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);animation:slide-in .2s ease;max-width:340px}
+@keyframes slide-in{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{background:var(--bg2);border-left:3px solid var(--accent);color:var(--text)}
+.toast.error{background:var(--bg2);border-left:3px solid var(--red);color:var(--text)}
+.toast.info{background:var(--bg2);border-left:3px solid var(--blue);color:var(--text)}
+/* ─── MODALS ─────────────────────────────────────────────────── */
+#modal-overlay{display:none;position:fixed;inset:0;background:#00000099;z-index:1000;
+  align-items:center;justify-content:center}
+#modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px;width:520px;max-width:96vw;box-shadow:var(--shadow)}
+.modal-title{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#add-stream-modal{display:none;position:fixed;inset:0;background:#00000099;z-index:2000;
+  align-items:center;justify-content:center}
+#add-stream-modal.open{display:flex}
+.rtsp-note{margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);font-family:var(--font-mono);font-size:10px;color:var(--text2);line-height:1.7}
+/* ─── MISC ───────────────────────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:4px 0}
+.section-title{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:8px}
+.empty-state{text-align:center;padding:28px;color:var(--text3);font-family:var(--font-mono);font-size:12px}
+.empty-icon{font-size:28px;margin-bottom:8px;opacity:.3}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+/* ─── MULTI MODEL SELECT ─────────────────────────────────────── */
+.model-checklist{max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;}
+.model-check-item{display:flex;align-items:center;gap:7px;padding:3px 4px;border-radius:2px;cursor:pointer;transition:background .1s;}
+.model-check-item:hover{background:var(--bg4);}
+.model-check-item input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;flex-shrink:0;cursor:pointer;}
+.model-check-item label{font-family:var(--font-mono);font-size:11px;color:var(--text);cursor:pointer;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.model-check-empty{font-family:var(--font-mono);font-size:11px;color:var(--text3);padding:4px 2px;}
+/* ─── DETECT MODES + VIDEO ───────────────────────────────────── */
+.detect-mode-tabs{display:flex;gap:4px;margin-bottom:12px}
+.detect-mode-btn{padding:5px 14px;border:1px solid var(--border);background:transparent;color:var(--text2);border-radius:var(--radius);font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;transition:all .15s;cursor:pointer}
+.detect-mode-btn:hover{border-color:var(--accent);color:var(--accent)}
+.detect-mode-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-border)}
+.video-controls{display:flex;align-items:center;gap:6px;padding:8px 0;flex-wrap:wrap}
+.vid-btn{padding:4px 10px;border:1px solid var(--border);background:transparent;color:var(--text2);border-radius:var(--radius);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.vid-btn:hover{border-color:var(--accent);color:var(--accent)}
+.vid-btn.spd-active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-border)}
+.seek-bar{flex:1;min-width:60px;accent-color:var(--accent);cursor:pointer;height:4px}
+.vid-time{font-family:var(--font-mono);font-size:10px;color:var(--text3);white-space:nowrap}
+#detect-video{display:block;max-width:100%;max-height:480px;background:#000}
+#detect-video-pane,#detect-webcam-pane{display:none}
+#vid-player-wrap.fs-active{width:100vw!important;height:100vh!important;overflow:visible!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#000!important}
+#vid-player-wrap.fs-active #detect-video{max-width:100vw!important;max-height:100vh!important;width:auto!important;height:100vh!important;object-fit:contain!important}
+#vid-player-wrap.fs-active #detect-video-overlay{width:100%!important;height:100%!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important}
+/* ─── FIRE ALERT BANNER ──────────────────────────────────────── */
+#fire-alert-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 99999;
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 40%, #7f1d1d 100%);
+  border-bottom: 3px solid #f87171;
+  padding: 0 20px;
+  height: 56px;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 32px #f8717166;
+  animation: fire-flash 0.9s ease-in-out infinite alternate;
+}
+@keyframes fire-flash {
+  from { box-shadow: 0 4px 32px #f8717166; }
+  to   { box-shadow: 0 4px 64px #f87171cc, 0 0 0 3px #f87171aa; }
+}
+#fire-alert-icon {
+  font-size: 28px;
+  animation: fire-shake 0.4s infinite alternate;
+}
+@keyframes fire-shake {
+  from { transform: rotate(-8deg) scale(1.0); }
+  to   { transform: rotate(8deg)  scale(1.15); }
+}
+#fire-alert-text {
+  flex: 1;
+}
+#fire-alert-title {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px #f87171;
+}
+#fire-alert-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #fca5a5;
+  margin-top: 2px;
+}
+#fire-alert-pending {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #fbbf24;
+  margin-top: 2px;
+}
+.fire-alert-btn {
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 1px solid #f87171aa;
+  background: #00000033;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.fire-alert-btn:hover { background: #00000066; }
+
+/* ─── CROWD ALERT BANNER ────────────────────────────────────── */
+#crowd-alert-banner {
+  display: none;
+  position: fixed;
+  top: 56px; left: 0; right: 0;   /* ngay dưới fire banner */
+  z-index: 99998;
+  background: linear-gradient(135deg, #78350f 0%, #92400e 40%, #78350f 100%);
+  border-bottom: 3px solid #fbbf24;
+  padding: 0 20px;
+  height: 52px;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 24px #fbbf2466;
+  animation: crowd-flash 1.2s ease-in-out infinite alternate;
+}
+@keyframes crowd-flash {
+  from { box-shadow: 0 4px 24px #fbbf2466; }
+  to   { box-shadow: 0 4px 48px #fbbf24bb, 0 0 0 2px #fbbf2488; }
+}
+#crowd-alert-icon { font-size: 26px; animation: crowd-shake 0.6s infinite alternate; }
+@keyframes crowd-shake {
+  from { transform: scale(1.0); }
+  to   { transform: scale(1.15); }
+}
+#crowd-alert-text { flex: 1; }
+#crowd-alert-title {
+  font-family: var(--font-mono); font-size: 14px; font-weight: 700;
+  color: #fff; letter-spacing: .07em; text-transform: uppercase;
+  text-shadow: 0 0 10px #fbbf24;
+}
+#crowd-alert-meta  { font-family: var(--font-mono); font-size: 10px; color: #fde68a; margin-top: 2px; }
+#crowd-alert-stream{ font-family: var(--font-mono); font-size: 10px; color: #fef3c7; margin-top: 1px; }
+#crowd-alert-pending {
+  display: none; font-family: var(--font-mono); font-size: 10px; color: #fcd34d; margin-top: 2px;
+}
+.crowd-alert-btn {
+  padding: 5px 14px; border-radius: 4px; border: 1px solid #fbbf24aa;
+  background: #00000033; color: #fff; font-family: var(--font-mono);
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.crowd-alert-btn:hover { background: #00000066; }
+/* Badge trên stream tile */
+.tile-crowd-badge {
+  position: absolute; top: 8px; left: 8px;   /* góc trái — tránh fire badge */
+  background: #f59e0bee; color: #000;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 3px;
+  display: none; pointer-events: none; z-index: 10;
+  animation: crowd-flash 1s ease-in-out infinite alternate;
+}
+.tile-crowd-badge.show { display: block; }
+/* ─── STREAM TILE — fire badge ───────────────────────────────── */
+.tile-fire-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: #f87171ee; color: #fff;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 3px;
+  display: none; pointer-events: none; z-index: 10;
+  animation: fire-flash 0.7s ease-in-out infinite alternate;
+}
+.tile-fire-badge.show { display: block; }
+/* ─── STREAM TILE — SIDEBAR LAYOUT ──────────────────────────── */
+.stream-tile { display: flex; flex-direction: row; }
+.tile-main   { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tile-sidebar {
+  width: 180px; flex-shrink: 0;
+  background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.tile-sb-section {
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.tile-sb-title {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 4px;
+}
+.tile-sb-count {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--text2); margin-left: auto;
+}
+.tile-p-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+.tile-p-lbl {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text2); width: 42px; flex-shrink: 0;
+}
+.tile-p-inp {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); border-radius: var(--radius);
+  padding: 3px 6px; font-family: var(--font-mono); font-size: 10px;
+}
+.tile-p-inp:focus { outline: none; border-color: var(--accent); }
+.tile-apply-btn {
+  width: 100%; padding: 4px; background: var(--accent-dim);
+  color: var(--accent); border: 1px solid var(--accent-border);
+  border-radius: var(--radius); font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600; cursor: pointer;
+  transition: all .15s; margin-top: 3px;
+}
+.tile-apply-btn:hover { background: var(--accent); color: #0a0f0a; }
+.tile-dets-list {
+  flex: 1; overflow-y: auto; padding: 5px 8px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.tile-det-row {
+  display: flex; align-items: center; gap: 4px; padding: 3px 6px;
+  background: var(--bg3); border-radius: 2px;
+  border-left: 2px solid var(--accent);
+}
+.tile-det-cat {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tile-det-sc {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--text2); background: var(--bg4);
+  padding: 1px 4px; border-radius: 2px; flex-shrink: 0;
+}
+.tile-no-det {
+  color: var(--text3); font-family: var(--font-mono);
+  font-size: 10px; padding: 4px 0; text-align: center;
+}
+/* ─── TILE STOPPED STATE ─────────────────────────────────────── */
+.tile-stopped-overlay {
+  position: absolute; inset: 0;
+  background: #00000088;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px; color: var(--text2);
+  font-family: var(--font-mono); font-size: 12px;
+}
+.tile-stopped-overlay.show { display: flex; }
+.tile-restart-btn {
+  padding: 6px 18px;
+  background: var(--accent-dim); color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.tile-restart-btn:hover { background: var(--accent); color: #0a0f0a; }
+
+</style>
+</head>
+<body>
+<!-- ─── FIRE ALERT BANNER ──────────────────────────────────────── -->
+<div id="fire-alert-banner">
+  <div id="fire-alert-icon">🔥</div>
+  <div id="fire-alert-text">
+    <div id="fire-alert-title">⚠ CẢNH BÁO CHÁY — FIRE DETECTED</div>
+    <div id="fire-alert-meta"></div>
+    <div id="fire-alert-stream" style="font-family:var(--font-mono);font-size:10px;color:#fde68a;margin-top:1px;"></div>
+    <div id="fire-alert-pending"></div>
+  </div>
+  <button class="fire-alert-btn" id="fire-alert-mute" onclick="toggleFireAlertMute()" title="Tắt/bật âm thanh">🔊</button>
+  <button class="fire-alert-btn" onclick="dismissFireAlert()" title="Bỏ qua 10 giây">✕ Bỏ qua</button>
+</div>
+
+<!-- ─── CROWD ALERT BANNER ───────────────────────────────────── -->
+<div id="crowd-alert-banner">
+  <div id="crowd-alert-icon">👥</div>
+  <div id="crowd-alert-text">
+    <div id="crowd-alert-title">⚠ ĐÔNG NGƯỜI — CROWD DETECTED</div>
+    <div id="crowd-alert-meta"></div>
+    <div id="crowd-alert-stream"></div>
+    <div id="crowd-alert-pending"></div>
+  </div>
+  <button class="crowd-alert-btn" id="crowd-alert-mute" onclick="toggleCrowdAlertMute()" title="Tắt/bật âm thanh">🔊</button>
+  <button class="crowd-alert-btn" onclick="dismissCrowdAlert()" title="Bỏ qua 10 giây">✕ Bỏ qua</button>
+</div>
+
+<!-- ─── HEADER ───────────────────────────────────────────────── -->
+<div id="header">
+  <div class="logo"><div class="logo-dot"></div>VISION NVR</div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="switchPage('detect')">DETECT</button>
+    <button class="nav-btn" onclick="switchPage('stream')">STREAM</button>
+    <button class="nav-btn" onclick="switchPage('models')">MODELS</button>
+    <button class="nav-btn" onclick="switchPage('ensemble')">ENSEMBLE</button>
+    <button class="nav-btn" onclick="switchPage('system')">SYSTEM</button>
+  </nav>
+  <div class="header-right">
+    <input class="host-input" id="host-input" type="text" value="http://triton-api:8003" placeholder="http://host:8003" />
+    <button class="btn-connect" onclick="checkHealth()">CONNECT</button>
+    <div class="status-pill">
+      <div class="status-dot" id="triton-dot"></div>
+      <span id="triton-label">disconnected</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀</button>
+  </div>
+</div>
+
+<!-- ─── MAIN ─────────────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- ══ DETECT PAGE ══════════════════════════════════════════ -->
+  <div class="page active" id="page-detect">
+    <div class="detect-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Image Inference</span>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+            <div class="infer-stats" id="detect-stats"></div>
+            <button class="btn btn-ghost" id="clear-btn" onclick="clearDetect()" style="display:none;padding:4px 10px;font-size:10px;">✕ Clear</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="detect-mode-tabs">
+            <button class="detect-mode-btn active" onclick="setDetectMode('image')">📷 IMAGE</button>
+            <button class="detect-mode-btn" onclick="setDetectMode('video')">🎬 VIDEO</button>
+            <button class="detect-mode-btn" onclick="setDetectMode('webcam')">📹 WEBCAM</button>
+          </div>
+          <!-- image mode -->
+          <div id="detect-image-pane">
+            <div id="canvas-wrap">
+              <canvas id="preview-canvas"></canvas>
+              <canvas id="overlay-canvas"></canvas>
+            </div>
+            <div class="dropzone" id="dropzone"
+                onclick="document.getElementById('file-input').click()"
+                ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+              <div class="dropzone-icon">⬆</div>
+              <div class="dropzone-text">Drop image here or click to browse</div>
+              <div class="dropzone-sub">JPEG · PNG supported</div>
+            </div>
+            <input type="file" id="file-input" accept="image/jpeg,image/png" style="display:none" onchange="handleFileSelect(event)" />
+          </div>
+          <!-- video mode -->
+          <div id="detect-video-pane">
+            <div id="vid-dropzone" class="dropzone" onclick="document.getElementById('vid-file-input').click()"
+                ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')"
+                ondrop="this.classList.remove('drag');const f=event.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('vid-file-input').files=dt.files;loadVidFile({target:document.getElementById('vid-file-input')})}event.preventDefault()">
+              <div class="dropzone-icon">🎬</div>
+              <div class="dropzone-text">Drop video here or click to browse</div>
+              <div class="dropzone-sub">MP4 · WebM · MOV supported</div>
+            </div>
+            <div id="vid-player-wrap" style="display:none;position:relative;background:#000;border-radius:var(--radius);overflow:hidden;">
+              <video id="detect-video" preload="metadata"></video>
+              <canvas id="detect-video-overlay" style="position:absolute;top:0;left:0;pointer-events:none;width:100%;height:100%;"></canvas>
+            </div>
+            <div class="video-controls">
+              <button class="btn btn-primary" id="vid-det-start" onclick="startVideoDetect()" style="padding:4px 10px;font-size:10px;" disabled>▶ Start Detect</button>
+              <button class="btn btn-danger" id="vid-det-stop" style="display:none;padding:4px 10px;font-size:10px;" onclick="stopVideoDetect()">■ Stop Detect</button>
+              <button class="vid-btn" id="vid-playpause" onclick="vidPlayPause()">▶</button>
+              <input type="range" class="seek-bar" id="vid-seek" value="0" min="0" step="0.01" oninput="vidSeek(this.value)" style="flex:1;" />
+              <span class="vid-time" id="vid-time">0:00 / 0:00</span>
+              <button class="vid-btn spd-active" id="vs1" onclick="vidSpeed(1,this)">1×</button>
+              <button class="vid-btn" id="vs2" onclick="vidSpeed(2,this)">2×</button>
+              <button class="vid-btn" id="vs3" onclick="vidSpeed(3,this)">3×</button>
+              <button class="vid-btn" id="vs4" onclick="vidSpeed(4,this)">4×</button>
+              <button class="vid-btn" onclick="vidFullscreen()" title="Fullscreen">⛶</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('vid-file-input').click()" style="padding:4px 10px;font-size:10px;">📂 Open</button>
+            </div>
+            <input type="file" id="vid-file-input" accept="video/*" style="display:none" onchange="loadVidFile(event)" />
+          </div>
+          <!-- webcam mode -->
+          <div id="detect-webcam-pane">
+            <div style="position:relative;background:#000;border-radius:var(--radius);overflow:hidden;min-height:200px;">
+              <canvas id="webcam-detect-canvas" style="display:block;max-width:100%;"></canvas>
+            </div>
+            <div class="video-controls">
+              <button class="btn btn-primary" id="webcam-det-start" onclick="startDetectWebcam()">▶ Start Webcam</button>
+              <button class="btn btn-danger" id="webcam-det-stop" style="display:none;" onclick="stopDetectWebcam()">■ Stop</button>
+              <select class="param-input" id="webcam-det-device" style="flex:1;max-width:220px;"><option value="">Default Camera</option></select>
+              <button class="btn btn-ghost" onclick="enumerateDetectCameras()" style="padding:4px 8px;font-size:10px;" title="Refresh cameras">⟳</button>
+              <button class="vid-btn" onclick="webcamDetFullscreen()" title="Fullscreen">⛶</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Parameters</span>
+            <button class="btn btn-ghost" style="margin-left:auto;padding:4px 8px;font-size:10px;" onclick="loadModels()">⟳</button>
+          </div>
+          <div class="panel-body">
+            <div class="param-row" style="align-items:flex-start;">
+              <span class="param-label" style="padding-top:4px;">models</span>
+              <div style="flex:1;">
+                <div class="model-checklist" id="d-model-list">
+                  <span class="model-check-empty">Loading…</span>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:5px;">
+                  <button class="btn btn-ghost" style="padding:2px 8px;font-size:10px;" onclick="selectAllModels(true)">All</button>
+                  <button class="btn btn-ghost" style="padding:2px 8px;font-size:10px;" onclick="selectAllModels(false)">None</button>
+                  <span id="d-model-count" style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-left:auto;align-self:center;"></span>
+                </div>
+              </div>
+            </div>
+            <div class="param-row">
+              <span class="param-label">classes</span>
+              <input class="param-input" id="d-classes" placeholder="YOLOE prompts only (e.g. person,car)" title="Only sent to YOLOE models as text prompts. Normal YOLO uses labels configured in the Model Config tab." />
+            </div>
+            <div class="param-row">
+              <span class="param-label">imgsz</span>
+              <input class="param-input" id="d-imgsz" value="640" style="width:90px;" />
+            </div>
+            <div class="param-row">
+              <span class="param-label">conf</span>
+              <input class="param-input" id="d-conf" type="number" min="0" max="1" step="0.05" value="0.5" style="width:80px;" />
+            </div>
+            <div class="param-row">
+              <span class="param-label">iou</span>
+              <input class="param-input" id="d-iou" type="number" min="0" max="1" step="0.05" value="0.45" style="width:80px;" />
+            </div>
+            <div class="param-row">
+              <span class="param-label">stride</span>
+              <input class="param-input" id="d-stride" type="number" min="1" max="30" step="1" value="1"
+                style="width:80px;" title="Chỉ gửi inference mỗi N frame" />
+            </div>
+            <button class="btn btn-primary btn-full" id="run-btn" onclick="runDetect()" disabled>▶ RUN INFERENCE</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Detections</span>
+            <span id="det-count" style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--text3);"></span>
+          </div>
+          <div class="panel-body" style="padding:10px;">
+            <div class="results-list" id="results-list">
+              <div class="empty-state"><div class="empty-icon">⬤</div>No results yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STREAM PAGE ══════════════════════════════════════════ -->
+  <div class="page" id="page-stream">
+    <div class="stream-toolbar">
+      <span class="stream-toolbar-label">Streams</span>
+      <div class="layout-btns" id="stream-layout-btns">
+        <button class="layout-btn" onclick="setGridCols('stream',1)">1×</button>
+        <button class="layout-btn active" onclick="setGridCols('stream',2)">2×</button>
+        <button class="layout-btn" onclick="setGridCols('stream',3)">3×</button>
+        <button class="layout-btn" onclick="setGridCols('stream',4)">4×</button>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);"></div>
+      <button class="btn btn-ghost" onclick="loadModels()" style="padding:4px 10px;font-size:10px;">⟳ Models</button>
+      <button class="btn btn-primary" style="margin-left:auto;" onclick="openAddStream('stream')">+ Add Stream</button>
+      <button class="btn btn-danger" id="stream-stop-all" style="display:none;" onclick="stopAllStreams('stream')">■ Stop All</button>
+    </div>
+    <div class="stream-grid" id="stream-grid">
+      <div class="stream-empty" id="stream-empty">
+        <div class="empty-icon">📷</div>
+        <div>No streams active</div>
+        <div style="margin-top:8px;font-size:11px;">Click "+ Add Stream" to start webcam or video file inference</div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  <!-- ══ MODELS PAGE ═══════════════════════════════════════════ -->
+  <div class="page" id="page-models">
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:14px;">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Loaded Models</span>
+          <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px;" onclick="loadModels()">⟳ Refresh</button>
+        </div>
+        <div class="panel-body" style="padding:10px;">
+          <div class="models-grid" id="models-grid">
+            <div class="empty-state"><div class="empty-icon">⬤</div>No models loaded</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Upload Model (.pt)</span></div>
+        <div class="panel-body">
+          <div class="upload-dropzone" id="upload-dropzone"
+               onclick="document.getElementById('model-file-input').click()"
+               ondragover="handleUploadDragOver(event)" ondrop="handleUploadDrop(event)">
+            <div style="font-size:24px;margin-bottom:6px;">📦</div>
+            <div id="upload-filename">Drag .pt / .pth here or click</div>
+          </div>
+          <input type="file" id="model-file-input" accept=".pt,.pth" style="display:none" onchange="handleModelFileSelect(event)" />
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="param-row">
+            <span class="param-label">name</span>
+            <input class="param-input" id="up-name" placeholder="auto from filename" />
+          </div>
+          <div class="param-row">
+            <span class="param-label">gpus</span>
+            <input class="param-input" id="up-gpus" placeholder="0  or  0,1" />
+          </div>
+          <div class="param-row">
+            <span class="param-label">imgsz</span>
+            <input class="param-input" id="up-imgsz" value="640" style="width:80px;" />
+          </div>
+          <div class="grid-2" style="margin-bottom:10px;">
+            <div class="checkbox-row"><input type="checkbox" id="up-overwrite" /><label for="up-overwrite">overwrite</label></div>
+            <div class="checkbox-row"><input type="checkbox" id="up-dynamic" checked /><label for="up-dynamic">dynamic ONNX</label></div>
+            <div class="checkbox-row"><input type="checkbox" id="up-yoloe" checked /><label for="up-yoloe">YOLOE 2-input</label></div>
+          </div>
+          <div class="progress-bar-wrap" id="upload-progress-wrap"><div class="progress-bar" id="upload-progress" style="width:0%"></div></div>
+          <button class="btn btn-primary btn-full" id="upload-btn" onclick="uploadModel()" disabled>⬆ UPLOAD & EXPORT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ENSEMBLE PAGE ═════════════════════════════════════════ -->
+  <div class="page" id="page-ensemble">
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:14px;">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Active Ensembles</span>
+          <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px;" onclick="loadModels()">⟳ Refresh</button>
+        </div>
+        <div class="panel-body" style="padding:10px;">
+          <div class="models-grid" id="ensemble-grid">
+            <div class="empty-state"><div class="empty-icon">⬤</div>No ensembles configured</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title" id="ens-panel-title">Create Ensemble</span></div>
+        <div class="panel-body">
+          <div class="param-row">
+            <span class="param-label">name</span>
+            <input class="param-input" id="ens-name" placeholder="e.g. safety-stack" />
+          </div>
+          <div class="divider" style="margin:10px 0;"></div>
+          <div class="section-title">Steps (sub-models)</div>
+          <div class="ens-steps" id="ens-steps">
+            <div style="color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:8px;">No steps added yet</div>
+          </div>
+          <div class="param-row" style="margin-top:10px;">
+            <select class="param-input" id="ens-step-select" style="flex:1;"><option value="">Add model…</option></select>
+            <button class="btn btn-ghost" onclick="addEnsStep()" style="padding:5px 12px;">+ Add</button>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-primary btn-full" id="ens-submit-btn" onclick="createEnsemble()">CREATE ENSEMBLE</button>
+            <button class="btn btn-ghost btn-full" id="ens-cancel-btn" onclick="cancelEnsembleEdit()" style="display:none;margin-top:6px;">✕ Hủy chỉnh sửa</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SYSTEM PAGE ═══════════════════════════════════════════ -->
+  <div class="page" id="page-system">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">System Health</span>
+        <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px;" onclick="checkHealth()">⟳ Refresh</button>
+      </div>
+      <div class="panel-body">
+        <div class="health-grid" id="health-grid"><div class="empty-state">Not connected</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">GPU Info</span></div>
+      <div class="panel-body" style="padding:0;">
+        <table class="gpu-table">
+          <thead><tr><th>GPU</th><th>Name</th><th>VRAM</th><th>Models</th></tr></thead>
+          <tbody id="gpu-tbody"><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">No GPU data</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">System Monitor</span>
+        <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px;" onclick="loadSystemStatus()">⟳ Refresh</button>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:8px;">auto·10s</span>
+      </div>
+      <div class="panel-body">
+        <div class="sysmon-grid" id="sysmon-grid">
+          <div class="empty-state">Connect to load stats</div>
+        </div>
+        <div class="section-title" style="margin-top:6px;">Triton Inference Stats</div>
+        <div id="triton-stats-wrap">
+          <div style="color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:6px 0;">No stats loaded</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Model Config &amp; Labels</span>
+        <select class="param-input" id="cfg-model" onchange="loadConfig()" style="margin-left:auto;width:180px;"><option value="">— select model —</option></select>
+        <button class="btn btn-ghost" onclick="loadConfig()" style="padding:4px 10px;font-size:10px;">⟳</button>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div class="section-title">Triton Config</div>
+            <textarea class="code-editor" id="cfg-editor" placeholder="Select a model to load config…"></textarea>
+            <div class="btn-row" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="saveConfig()">Save Config</button>
+              <button class="btn btn-ghost" onclick="loadConfig()">⟳ Reload</button>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Labels</div>
+            <div class="labels-list" id="labels-list">
+              <div class="empty-state" style="padding:16px;">Select a model to load labels</div>
+            </div>
+            <div class="btn-row" style="margin-top:10px;">
+              <button class="btn btn-ghost" onclick="addLabelRow()">+ Add Label</button>
+              <button class="btn btn-primary" onclick="saveLabels()" style="margin-left:auto;">💾 Save Labels</button>
+            </div>
+          </div>
+        </div>
+        <div class="divider" style="margin:14px 0;"></div>
+        <div class="section-title">Instance Group (GPU Assignment)</div>
+        <textarea class="code-editor" id="instances-editor" style="min-height:80px;" placeholder='[{"count":1,"kind":"KIND_GPU","gpus":[0]}]'></textarea>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="saveInstances()">Save Instances</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #main -->
+
+<!-- ─── ADD STREAM MODAL ──────────────────────────────────── -->
+<div id="add-stream-modal">
+  <div class="modal" style="width:540px;">
+    <div class="modal-title" id="add-stream-title">Add Stream</div>
+
+    <div class="param-row">
+      <span class="param-label">name</span>
+      <input class="param-input" id="ns-name" placeholder="e.g. Front Camera" style="flex:1;" />
+    </div>
+
+    <div id="ns-source-row" class="param-row">
+      <span class="param-label">source</span>
+      <select class="param-input" id="ns-source" onchange="onSourceChange()" style="flex:1;">
+        <option value="webcam">Webcam</option>
+        <option value="file">Video File</option>
+        <option value="ws">WebSocket / RTSP Proxy</option>
+        <option value="hls">HLS Stream</option>
+      </select>
+    </div>
+
+    <div id="ns-ws-row" class="param-row" style="display:none;">
+      <span class="param-label">ws url</span>
+      <input class="param-input" id="ns-ws-url" placeholder="ws://192.168.1.x:8888/stream/" style="flex:1;" />
+    </div>
+
+    <div id="ns-hls-row" class="param-row" style="display:none;">
+      <span class="param-label">hls url</span>
+      <input class="param-input" id="ns-hls-url" placeholder="http://server:8888/stream/index.m3u8" style="flex:1;" />
+    </div>
+
+    <div id="ns-webcam-row" class="param-row" style="display:none;">
+      <span class="param-label">device</span>
+      <select class="param-input" id="ns-webcam-device" style="flex:1;"><option value="">Default Camera</option></select>
+    </div>
+
+    <div id="ns-file-row" class="param-row" style="display:none;">
+      <span class="param-label">file</span>
+      <button class="btn btn-ghost" onclick="document.getElementById('ns-file-input').click()" style="flex:1;">Choose video file…</button>
+      <input type="file" id="ns-file-input" accept="video/*" style="display:none" onchange="onFileSelect(event)" />
+      <span id="ns-file-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-left:8px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    </div>
+
+    <div id="ns-rtsp-note" class="rtsp-note" style="display:none;">
+      <div style="color:var(--yellow);margin-bottom:4px;">▲ RTSP → WebSocket Proxy required</div>
+      Browsers cannot connect to RTSP directly. Run mediamtx on your server:<br>
+      <span style="color:var(--accent);">docker run --rm -p 8554:8554 -p 8888:8888 bluenviron/mediamtx</span><br>
+      <strong>WebSocket (JPEG frames):</strong> <span style="color:var(--accent);">ws://server:8888/stream/</span><br>
+      <strong>HLS (recommended):</strong> <span style="color:var(--accent);">http://server:8888/stream/index.m3u8</span>
+    </div>
+
+    <div class="divider" style="margin:12px 0;"></div>
+
+    <div class="param-row">
+      <span class="param-label">model</span>
+      <select class="param-input" id="ns-model" style="flex:1;"><option value="">— select —</option></select>
+    </div>
+    <div class="param-row">
+      <span class="param-label">classes</span>
+      <input class="param-input" id="ns-classes" placeholder="YOLOE only: person,car" style="flex:1;" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <div class="section-title" style="margin-bottom:4px;">imgsz</div>
+        <input class="param-input" id="ns-imgsz" value="640" style="width:100%;" />
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:4px;">conf</div>
+        <input class="param-input" id="ns-conf" type="number" min="0" max="1" step="0.05" value="0.5" style="width:100%;" />
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:4px;">fps cap</div>
+        <input class="param-input" id="ns-fps" type="number" min="1" max="30" value="10" style="width:100%;" />
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:4px;">stride</div>
+        <input class="param-input" id="ns-stride" type="number" min="1" max="30" step="1" value="1" style="width:100%;" title="Infer mỗi N frame" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAddStream()">Cancel</button>
+      <button class="btn btn-primary" onclick="addStream()">▶ Start Stream</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CONFIRM MODAL ─────────────────────────────────────── -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Confirm</div>
+    <div id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════ */
+let HOST = 'http://triton-api:8003';
+let allModels    = [];   // single / ONNX models
+let allEnsembles = [];   // ensemble models
+let currentFile = null;
+let currentImage = null;
+let uploadModelFile = null;
+let ensSteps = [];
+let editingEnsemble = null; // null = create, string = tên ensemble đang edit
+let addStreamTab = 'stream';
+let nsSelectedFile = null;
+let streamIdCounter = 0;
+let detectMode = 'image';
+let detectWebcamStream = null;
+let detectWebcamVideo = null;
+let detectWebcamLoopId = null;
+let detectWebcamWs = null;
+let detectWebcamAnns = [];
+let detectWebcamImgShape = null;
+let detectWebcamCatMap = {};
+let videoDetectWs = null;
+let videoDetectLoopId = null;
+let videoDetectAnns = [];
+let videoDetectImgShape = null;
+let videoDetectCatMap = {};
+
+// Map of all active streams keyed by string id
+const streams = new Map();
+
+/* ── Fire Alert State ─────────────────────────────────────────── */
+let fireAlertActive    = false;
+let fireAlertMuted     = false;
+let fireAlertLastTs    = 0;
+let fireAlertDismissed = false;
+const FIRE_ALERT_COOLDOWN = 2000;  // ms giữa các lần phát âm thanh
+const FIRE_CONFIRM_FRAMES = 20;     // frame liên tiếp cần xác nhận
+const FIRE_CONF_THRESHOLD = 0.60;  // confidence tối thiểu
+let fireConsecutiveFrames = 0;
+
+// Theo dõi cháy theo từng stream
+const streamFireFrames = {}; // { streamId: count }
+const STREAM_FIRE_CONFIRM = 4; // frame xác nhận cho stream
+
+const FIRE_LABELS = ['fire', 'flame', 'smoke', 'lửa', 'khói'];
+
+function _getFireAnns(anns) {
+  return anns.filter(a =>
+    FIRE_LABELS.some(l => a.category_name?.toLowerCase().includes(l)) &&
+    (a.score || 0) >= FIRE_CONF_THRESHOLD
+  );
+}
+
+function checkFireAlert(anns) {
+  const fireAnns = _getFireAnns(anns);
+  if (fireAnns.length > 0) {
+    fireConsecutiveFrames++;
+  } else {
+    fireConsecutiveFrames = 0;
+    clearFireAlert();
+    return;
+  }
+  const pending = document.getElementById('fire-alert-pending');
+  if (pending) {
+    if (fireConsecutiveFrames < FIRE_CONFIRM_FRAMES) {
+      pending.textContent = `🔥 Đang xác nhận… ${fireConsecutiveFrames}/${FIRE_CONFIRM_FRAMES} frame`;
+      pending.style.display = '';
+    } else {
+      pending.style.display = 'none';
+    }
+  }
+  if (fireConsecutiveFrames < FIRE_CONFIRM_FRAMES) return;
+  const count = fireAnns.length;
+  const topScore = Math.max(...fireAnns.map(a => a.score || 0));
+  document.getElementById('fire-alert-meta').textContent =
+    `${count} detection${count!==1?'s':''} · conf ${(topScore*100).toFixed(1)}% · ${fireConsecutiveFrames} frames`;
+  if (!fireAlertDismissed && !fireAlertActive) {
+    document.getElementById('fire-alert-banner').style.display = 'flex';
+    fireAlertActive = true;
+  }
+  const now = Date.now();
+  if (!fireAlertMuted && now - fireAlertLastTs > FIRE_ALERT_COOLDOWN) {
+    fireAlertLastTs = now;
+    _playMilitarySiren();
+  }
+}
+
+function checkStreamFireAlert(instance, anns) {
+  const id = instance.id;
+  const fireAnns = _getFireAnns(anns);
+
+  if (!streamFireFrames[id]) streamFireFrames[id] = 0;
+
+  if (fireAnns.length > 0) {
+    streamFireFrames[id]++;
+  } else {
+    streamFireFrames[id] = 0;
+    // Ẩn badge trên tile
+    const badge = document.getElementById(`fire-badge-${id}`);
+    if (badge) badge.classList.remove('show');
+    // Chỉ clear banner nếu không còn stream nào đang cháy
+    const anyFire = [...streams.values()].some(s => (streamFireFrames[s.id] || 0) >= STREAM_FIRE_CONFIRM);
+    if (!anyFire) clearFireAlert();
+    return;
+  }
+
+  // Hiện badge pending trên tile khi đang xác nhận
+  const badge = document.getElementById(`fire-badge-${id}`);
+
+  if (streamFireFrames[id] < STREAM_FIRE_CONFIRM) {
+    if (badge) { badge.textContent = `🔥 ${streamFireFrames[id]}/${STREAM_FIRE_CONFIRM}`; badge.classList.add('show'); }
+    return;
+  }
+
+  // Đã xác nhận — hiện badge đầy đủ
+  if (badge) { badge.textContent = '🔥 FIRE'; badge.classList.add('show'); }
+
+  // Cập nhật banner toàn cục
+  const count = fireAnns.length;
+  const topScore = Math.max(...fireAnns.map(a => a.score || 0));
+  document.getElementById('fire-alert-meta').textContent =
+    `${count} detection${count !== 1 ? 's' : ''} · conf ${(topScore * 100).toFixed(1)}%`;
+  document.getElementById('fire-alert-stream').textContent =
+    `📷 Stream: ${instance.name} (${streamFireFrames[id]} frames)`;
+
+  if (!fireAlertDismissed && !fireAlertActive) {
+    document.getElementById('fire-alert-banner').style.display = 'flex';
+    fireAlertActive = true;
+  }
+  const now = Date.now();
+  if (!fireAlertMuted && now - fireAlertLastTs > FIRE_ALERT_COOLDOWN) {
+    fireAlertLastTs = now;
+    _playMilitarySiren();
+  }
+}
+
+function clearFireAlert() {
+  if (fireAlertActive) {
+    document.getElementById('fire-alert-banner').style.display = 'none';
+    fireAlertActive = false;
+    fireAlertDismissed = false;
+  }
+  fireConsecutiveFrames = 0;
+  const pending = document.getElementById('fire-alert-pending');
+  if (pending) pending.style.display = 'none';
+}
+
+function dismissFireAlert() {
+  document.getElementById('fire-alert-banner').style.display = 'none';
+  fireAlertActive = false;
+  fireAlertDismissed = true;
+  setTimeout(() => { fireAlertDismissed = false; }, 10000);
+}
+
+function toggleFireAlertMute() {
+  fireAlertMuted = !fireAlertMuted;
+  document.getElementById('fire-alert-mute').textContent = fireAlertMuted ? '🔇' : '🔊';
+}
+
+/* Military klaxon / air-raid siren: 3 sweeping wail bursts */
+function _playMilitarySiren() {
+  try {
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = actx.createGain();
+    master.gain.value = 0.28;
+    master.connect(actx.destination);
+    const BURSTS = 3, BURST_DUR = 0.55, GAP = 0.08;
+    for (let b = 0; b < BURSTS; b++) {
+      const t0 = actx.currentTime + b * (BURST_DUR + GAP);
+      // Primary wail: sawtooth sweep 500→1200→500 Hz
+      const osc1 = actx.createOscillator();
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(500,  t0);
+      osc1.frequency.linearRampToValueAtTime(1200, t0 + BURST_DUR * 0.5);
+      osc1.frequency.linearRampToValueAtTime(500,  t0 + BURST_DUR);
+      // Sub-wail a 5th lower for klaxon character
+      const osc2 = actx.createOscillator();
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(333,  t0);
+      osc2.frequency.linearRampToValueAtTime(800, t0 + BURST_DUR * 0.5);
+      osc2.frequency.linearRampToValueAtTime(333, t0 + BURST_DUR);
+      // Envelope: hard attack, sustain, fast release
+      const env = actx.createGain();
+      env.gain.setValueAtTime(0, t0);
+      env.gain.linearRampToValueAtTime(1,   t0 + 0.01);
+      env.gain.setValueAtTime(1,            t0 + BURST_DUR - 0.04);
+      env.gain.linearRampToValueAtTime(0,   t0 + BURST_DUR);
+      // Soft distortion for gritty klaxon texture
+      const ws = actx.createWaveShaper();
+      const curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) {
+        const x = (i * 2) / 256 - 1;
+        curve[i] = (Math.PI + 280) * x / (Math.PI + 280 * Math.abs(x));
+      }
+      ws.curve = curve;
+      const mix2 = actx.createGain();
+      mix2.gain.value = 0.35;
+      osc1.connect(ws); ws.connect(env);
+      osc2.connect(mix2); mix2.connect(env);
+      env.connect(master);
+      osc1.start(t0); osc1.stop(t0 + BURST_DUR);
+      osc2.start(t0); osc2.stop(t0 + BURST_DUR);
+    }
+  } catch {}
+}
+
+/* ── Crowd Alert State ────────────────────────────────────────── */
+let crowdAlertActive    = false;
+let crowdAlertMuted     = false;
+let crowdAlertLastTs    = 0;
+let crowdAlertDismissed = false;
+const CROWD_MIN_PERSONS     = 4;   // số người tối thiểu để kích hoạt
+const CROWD_CONFIRM_FRAMES  = 20;  // frame liên tiếp xác nhận
+const CROWD_CONF_THRESHOLD  = 0.60;
+const CROWD_ALERT_COOLDOWN  = 3000;
+const streamCrowdFrames     = {};
+
+function _getCrowdPersons(anns) {
+  return anns.filter(a =>
+    a.category_name?.toLowerCase() === 'person' &&
+    (a.score || 0) >= CROWD_CONF_THRESHOLD
+  );
+}
+
+/* Dùng cho webcam/video detect (detect page) */
+let crowdConsecutiveFrames = 0;
+
+function checkCrowdAlert(anns) {
+  const persons = _getCrowdPersons(anns);
+  if (persons.length >= CROWD_MIN_PERSONS) {
+    crowdConsecutiveFrames++;
+  } else {
+    crowdConsecutiveFrames = 0;
+    clearCrowdAlert();
+    return;
+  }
+  const pending = document.getElementById('crowd-alert-pending');
+  if (pending) {
+    if (crowdConsecutiveFrames < CROWD_CONFIRM_FRAMES) {
+      pending.textContent = `👥 Đang xác nhận… ${crowdConsecutiveFrames}/${CROWD_CONFIRM_FRAMES} frame`;
+      pending.style.display = '';
+    } else {
+      pending.style.display = 'none';
+    }
+  }
+  if (crowdConsecutiveFrames < CROWD_CONFIRM_FRAMES) return;
+  document.getElementById('crowd-alert-meta').textContent =
+    `${persons.length} người · conf trung bình ${(persons.reduce((s,a)=>s+(a.score||0),0)/persons.length*100).toFixed(1)}% · ${crowdConsecutiveFrames} frames`;
+  if (!crowdAlertDismissed && !crowdAlertActive) {
+    document.getElementById('crowd-alert-banner').style.display = 'flex';
+    crowdAlertActive = true;
+  }
+  const now = Date.now();
+  if (!crowdAlertMuted && now - crowdAlertLastTs > CROWD_ALERT_COOLDOWN) {
+    crowdAlertLastTs = now;
+    _playCrowdChime();
+  }
+}
+
+/* Dùng cho stream tiles */
+function checkStreamCrowdAlert(instance, anns) {
+  const id = instance.id;
+  const persons = _getCrowdPersons(anns);
+  if (!streamCrowdFrames[id]) streamCrowdFrames[id] = 0;
+
+  if (persons.length >= CROWD_MIN_PERSONS) {
+    streamCrowdFrames[id]++;
+  } else {
+    streamCrowdFrames[id] = 0;
+    const badge = document.getElementById(`crowd-badge-${id}`);
+    if (badge) badge.classList.remove('show');
+    const anycrowd = [...streams.values()].some(s => (streamCrowdFrames[s.id]||0) >= CROWD_CONFIRM_FRAMES);
+    if (!anycrowd) clearCrowdAlert();
+    return;
+  }
+
+  const badge = document.getElementById(`crowd-badge-${id}`);
+  if (streamCrowdFrames[id] < CROWD_CONFIRM_FRAMES) {
+    if (badge) { badge.textContent = `👥 ${streamCrowdFrames[id]}/${CROWD_CONFIRM_FRAMES}`; badge.classList.add('show'); }
+    return;
+  }
+
+  if (badge) { badge.textContent = `👥 ${persons.length} người`; badge.classList.add('show'); }
+
+  document.getElementById('crowd-alert-meta').textContent =
+    `${persons.length} người · ${streamCrowdFrames[id]} frames liên tiếp`;
+  document.getElementById('crowd-alert-stream').textContent =
+    `📷 Stream: ${instance.name}`;
+
+  if (!crowdAlertDismissed && !crowdAlertActive) {
+    document.getElementById('crowd-alert-banner').style.display = 'flex';
+    crowdAlertActive = true;
+  }
+  const now = Date.now();
+  if (!crowdAlertMuted && now - crowdAlertLastTs > CROWD_ALERT_COOLDOWN) {
+    crowdAlertLastTs = now;
+    _playCrowdChime();
+  }
+}
+
+function clearCrowdAlert() {
+  if (crowdAlertActive) {
+    document.getElementById('crowd-alert-banner').style.display = 'none';
+    crowdAlertActive = false;
+    crowdAlertDismissed = false;
+  }
+  crowdConsecutiveFrames = 0;
+  const pending = document.getElementById('crowd-alert-pending');
+  if (pending) pending.style.display = 'none';
+}
+
+function dismissCrowdAlert() {
+  document.getElementById('crowd-alert-banner').style.display = 'none';
+  crowdAlertActive = false;
+  crowdAlertDismissed = true;
+  setTimeout(() => { crowdAlertDismissed = false; }, 10000);
+}
+
+function toggleCrowdAlertMute() {
+  crowdAlertMuted = !crowdAlertMuted;
+  document.getElementById('crowd-alert-mute').textContent = crowdAlertMuted ? '🔇' : '🔊';
+}
+
+/* Âm thanh crowd: 3 tiếng chuông đơn giản */
+function _playCrowdChime() {
+  try {
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = actx.createGain(); master.gain.value = 0.22; master.connect(actx.destination);
+    [[880, 0.0], [1100, 0.22], [880, 0.44]].forEach(([freq, delay]) => {
+      const osc = actx.createOscillator();
+      const env = actx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t0 = actx.currentTime + delay;
+      env.gain.setValueAtTime(0, t0);
+      env.gain.linearRampToValueAtTime(0.9, t0 + 0.01);
+      env.gain.exponentialRampToValueAtTime(0.001, t0 + 0.18);
+      osc.connect(env); env.connect(master);
+      osc.start(t0); osc.stop(t0 + 0.2);
+    });
+  } catch {}
+}
+
+/* ── Multi-model helpers ──────────────────────────────────────── */
+function getSelectedModels() {
+  return [...document.querySelectorAll('input[name="d-model-cb"]:checked')].map(cb => cb.value);
+}
+
+function selectAllModels(checked) {
+  document.querySelectorAll('input[name="d-model-cb"]').forEach(cb => cb.checked = checked);
+  _updateModelCount();
+}
+
+function _updateModelCount() {
+  const sel = getSelectedModels();
+  const cnt = document.getElementById('d-model-count');
+  if (cnt) cnt.textContent = sel.length ? `${sel.length} selected` : 'none selected';
+  const runBtn = document.getElementById('run-btn');
+  if (runBtn && detectMode !== 'webcam') runBtn.disabled = sel.length === 0 || !currentFile;
+}
+
+const COLORS = ['#4ade80','#60a5fa','#f87171','#fbbf24','#a78bfa','#34d399','#f472b6','#fb923c','#a3e635','#38bdf8'];
+
+/* ══════════════════════════════════════════════════════════════
+   UTILITY
+══════════════════════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#',''), 16);
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+window.onload = () => {
+  document.getElementById('host-input').addEventListener('change', e => {
+    HOST = e.target.value.replace(/\/$/, '');
+  });
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('add-stream-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddStream();
+  });
+  onSourceChange();
+  checkHealth();
+};
+
+/* ══════════════════════════════════════════════════════════════
+   THEME
+══════════════════════════════════════════════════════════════ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const t = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', t);
+  document.querySelector('.theme-toggle').textContent = t === 'dark' ? '☀' : '🌙';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════════════ */
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const _pg = document.getElementById('page-' + name); if (_pg) _pg.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().trim() === name) b.classList.add('active');
+  });
+  if (['models','ensemble'].includes(name)) loadModels();
+  if (name === 'system') { checkHealth(); loadGPUs(); loadSystemStatus(); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST / MODAL
+══════════════════════════════════════════════════════════════ */
+function toast(msg, type = 'info', duration = 3500) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+
+function openModal(title, body, onConfirm) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-confirm-btn').onclick = () => { onConfirm(); closeModal(); };
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+/* ══════════════════════════════════════════════════════════════
+   API
+══════════════════════════════════════════════════════════════ */
+async function apiFetch(path, opts = {}) {
+  HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+  try {
+    const r = await fetch(HOST + path, opts);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: r.statusText }));
+      throw new Error(err.detail || r.statusText);
+    }
+    return r.json();
+  } catch (e) {
+    if (e.message !== 'Failed to fetch') toast('API Error: ' + e.message, 'error');
+    throw e;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HEALTH
+══════════════════════════════════════════════════════════════ */
+async function checkHealth() {
+  HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+  try {
+    const h = await apiFetch('/health');
+    const dot = document.getElementById('triton-dot');
+    const lbl = document.getElementById('triton-label');
+    dot.className = h.triton_ready ? 'status-dot ok' : 'status-dot err';
+    lbl.textContent = h.triton_ready ? 'triton ok' : 'triton not ready';
+    renderHealthCards(h);
+    toast('Connected — Triton ' + (h.triton_ready ? 'ready' : 'not ready'), h.triton_ready ? 'success' : 'error');
+    loadModels();
+    loadGPUs();
+  } catch {
+    document.getElementById('triton-dot').className = 'status-dot err';
+    document.getElementById('triton-label').textContent = 'offline';
+  }
+}
+
+function renderHealthCards(h) {
+  const g = document.getElementById('health-grid');
+  const cards = [
+    { label:'Status', val:h.status||'—', cls:h.status==='ok'?'ok':'err' },
+    { label:'Triton Ready', val:h.triton_ready?'YES':'NO', cls:h.triton_ready?'ok':'err' },
+    { label:'Encoder', val:h.encoder_loaded?'LOADED':'NONE', cls:h.encoder_loaded?'ok':'warn' },
+    { label:'Max Concurrent', val:h.max_concurrent??'—', cls:'' },
+    { label:'Max FPS', val:h.max_fps??'—', cls:'' },
+    { label:'GPUs', val:h.gpu_count??'—', cls:'' },
+  ];
+  g.innerHTML = cards.map(c => `
+    <div class="health-card">
+      <div class="health-card-label">${c.label}</div>
+      <div class="health-card-value ${c.cls}">${c.val}</div>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GPUs
+══════════════════════════════════════════════════════════════ */
+async function loadGPUs() {
+  try {
+    const g = await apiFetch('/gpus');
+    const tbody = document.getElementById('gpu-tbody');
+    if (!g.gpus?.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">No GPU data</td></tr>';
+      return;
+    }
+    tbody.innerHTML = g.gpus.map(gpu => `<tr>
+      <td>${gpu.index}${g.default_gpu===gpu.index?' <span class="badge badge-green">default</span>':''}</td>
+      <td>${gpu.name}</td>
+      <td>${gpu.memory_total_mb ? (gpu.memory_total_mb/1024).toFixed(1)+' GB' : '—'}</td>
+      <td>${(g.models_by_gpu?.[gpu.index]||[]).join(', ')||'—'}</td>
+    </tr>`).join('');
+  } catch {}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SYSTEM STATUS / MONITOR
+══════════════════════════════════════════════════════════════ */
+let _sysmonTimer = null;
+async function loadSystemStatus() {
+  clearTimeout(_sysmonTimer);
+  try {
+    const s = await apiFetch('/system/status');
+    _renderSysmon(s);
+    _renderTritonStats(s.triton_metrics_summary);
+  } catch {
+    const g = document.getElementById('sysmon-grid');
+    if (g) g.innerHTML = '<div class="empty-state">Could not load — check connection</div>';
+  }
+  if (document.getElementById('page-system')?.classList.contains('active')) {
+    _sysmonTimer = setTimeout(loadSystemStatus, 10000);
+  }
+}
+
+function _barCls(pct) { return pct >= 85 ? 'crit' : pct >= 60 ? 'warn' : 'ok'; }
+
+function _renderSysmon(s) {
+  const g = document.getElementById('sysmon-grid');
+  if (!g) return;
+  const cards = [];
+  if (s.host?.cpu) {
+    const p = s.host.cpu.percent ?? 0;
+    cards.push({ label:`CPU (${s.host.cpu.count||'?'} cores)`, val:`${p.toFixed(1)}%`, sub:'utilization', pct:p });
+  }
+  if (s.host?.memory) {
+    const m = s.host.memory;
+    cards.push({ label:'RAM', val:`${m.percent.toFixed(1)}%`,
+      sub:`${(m.used_mb/1024).toFixed(1)} / ${(m.total_mb/1024).toFixed(1)} GB`, pct:m.percent });
+  }
+  (s.gpus||[]).forEach(gpu => {
+    const util = gpu.gpu_util_percent ?? 0;
+    const vUsed = gpu.memory_used_mb ?? 0, vTot = gpu.memory_total_mb ?? 0;
+    const vPct  = vTot ? Math.round(vUsed/vTot*100) : 0;
+    const temp  = gpu.temperature_c != null ? `${gpu.temperature_c}°C` : '—';
+    cards.push({ label:`GPU ${gpu.index} · ${temp}`, val:`${util}%`,
+      sub:`VRAM ${(vUsed/1024).toFixed(1)}/${(vTot/1024).toFixed(1)} GB · ${vPct}%`, pct:util, pct2:vPct });
+  });
+  g.innerHTML = cards.length ? cards.map(c => `
+    <div class="sysmon-card">
+      <div class="sysmon-card-label">${c.label}</div>
+      <div class="sysmon-card-val">${c.val}</div>
+      <div class="sysmon-card-sub">${c.sub}</div>
+      <div class="sysmon-bar-wrap"><div class="sysmon-bar ${_barCls(c.pct)}" style="width:${Math.min(c.pct,100)}%"></div></div>
+      ${c.pct2!=null?`<div class="sysmon-bar-wrap"><div class="sysmon-bar ok" style="width:${Math.min(c.pct2,100)}%;background:var(--blue);"></div></div>`:''}
+    </div>`).join('') : '<div class="empty-state">No resource data</div>';
+}
+
+function _renderTritonStats(summary) {
+  const wrap = document.getElementById('triton-stats-wrap');
+  if (!wrap) return;
+  const models = summary?.models;
+  if (!models || !Object.keys(models).length) {
+    wrap.innerHTML = '<div style="color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:6px 0;">No Triton stats</div>';
+    return;
+  }
+  const total = summary.inference_success_total ?? '—';
+  const fail  = summary.inference_failure_total ?? '—';
+  wrap.innerHTML = `
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--text2);margin-bottom:6px;">
+      Total: <span style="color:var(--accent)">${total}</span> success
+      · <span style="color:var(--red)">${fail}</span> fail
+    </div>
+    <table class="triton-stats-tbl">
+      <thead><tr><th>Model</th><th>Success</th><th>Fail</th></tr></thead>
+      <tbody>${Object.entries(models).map(([name,v])=>`
+        <tr>
+          <td>${escHtml(name)}</td>
+          <td style="color:var(--accent)">${v.success??0}</td>
+          <td style="color:${v.failure?'var(--red)':'var(--text3)'}">${v.failure??0}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODELS
+══════════════════════════════════════════════════════════════ */
+async function loadModels() {
+  try {
+    const data = await apiFetch('/models');
+    allModels    = data.single_models   || data.models?.filter(m => m.kind !== 'ensemble') || [];
+    allEnsembles = data.ensemble_models || data.models?.filter(m => m.kind === 'ensemble') || [];
+
+    await Promise.all(allEnsembles.map(async ens => {
+      try {
+        const data = await apiFetch(`/ensemble/${ens.name}`);
+        console.log(`GET /ensemble/${ens.name}:`, data);  // ← thêm dòng này
+        ens.steps = (data.steps || []).map(s =>
+          typeof s === 'string' ? { model: s, version: -1 }
+          : { model: s.model || s.model_name || '?', version: s.version ?? -1 }
+        );
+      } catch (e) {
+        console.warn(`/ensemble/${ens.name} failed:`, e.message);  // ← thêm dòng này
+        try {
+          const cfg = await apiFetch(`/models/${ens.name}/config`);
+          console.log(`GET /models/${ens.name}/config:`, cfg);  // ← thêm dòng này
+          ens.steps = (cfg.ensemble_scheduling?.step || []).map(s => ({
+            model: s.model_name || s.model || '?', version: s.model_version ?? -1
+          }));
+        } catch { ens.steps = []; }
+      }
+    }));
+
+    renderModelsGrid();
+    populateModelSelects();
+  } catch {}
+}
+
+function renderModelsGrid() {
+  const grid = document.getElementById('models-grid');
+  grid.innerHTML = allModels.length
+    ? allModels.map(modelCard).join('')
+    : '<div class="empty-state"><div class="empty-icon">⬤</div>No models loaded</div>';
+  const eg = document.getElementById('ensemble-grid');
+  eg.innerHTML = allEnsembles.length
+    ? allEnsembles.map(ensCard).join('')
+    : '<div class="empty-state"><div class="empty-icon">⬤</div>No ensembles</div>';
+}
+
+function modelCard(m) {
+  const state = m.state || 'READY';
+  const cls = state==='READY'?'badge-green':state==='LOADING'?'badge-yellow':'badge-red';
+  return `<div class="model-card">
+    <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <div>
+        <div class="model-card-title">${escHtml(m.name)}</div>
+        <div class="model-card-meta">${m.platform || m.kind || 'onnx'}</div>
+      </div>
+      <span class="badge ${cls}" style="margin-left:auto;">${state}</span>
+    </div>
+    <div class="model-card-actions">
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:10px;" onclick="detectWithModel('${escHtml(m.name)}')">▶ Detect</button>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:10px;" onclick="openModelConfig('${escHtml(m.name)}')">⚙ Config</button>
+    </div>
+  </div>`;
+}
+
+function ensCard(m) {
+  const steps = m.steps || [];
+  const stepsHtml = steps.length
+    ? steps.map((s, i) => {
+        const modelName = typeof s === 'string' ? s : (s.model || s.name || '?');
+        return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;
+          background:var(--bg3);border-radius:var(--radius);border-left:2px solid var(--purple);margin-bottom:3px;">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text3);width:16px;flex-shrink:0;">${i+1}.</span>
+          <span style="font-family:var(--font-mono);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">${escHtml(modelName)}</span>
+          <button onclick="removeStepFromEnsemble('${escHtml(m.name)}',${i})"
+            style="border:none;background:transparent;color:var(--red);cursor:pointer;font-size:12px;
+            padding:0 2px;opacity:.55;line-height:1;flex-shrink:0;"
+            title="Xóa step này" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.55">✕</button>
+        </div>`;
+      }).join('')
+    : `<div style="color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:4px 0 6px;">Không có steps</div>`;
+
+  return `<div class="model-card">
+    <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <div>
+        <div class="model-card-title">${escHtml(m.name)}</div>
+        <div class="model-card-meta">ensemble · ${steps.length} model${steps.length!==1?'s':''}</div>
+      </div>
+      <span class="badge badge-purple" style="margin-left:auto;">ENSEMBLE</span>
+    </div>
+    <div style="margin-bottom:8px;">${stepsHtml}</div>
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;">
+      <select id="add-step-select-${escHtml(m.name)}" class="param-input"
+        style="flex:1;font-size:10px;padding:3px 6px;">
+        <option value="">+ Thêm model vào ensemble…</option>
+        ${[...allModels,...allEnsembles].filter(x=>x.name!==m.name).map(x=>
+          `<option value="${escHtml(x.name)}">${escHtml(x.name)}</option>`
+        ).join('')}
+      </select>
+      <button class="btn btn-ghost" style="padding:3px 10px;font-size:10px;"
+        onclick="addStepToEnsemble('${escHtml(m.name)}')">Add</button>
+    </div>
+    <div class="model-card-actions">
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:10px;" onclick="detectWithModel('${escHtml(m.name)}')">▶ Detect</button>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:10px;" onclick="editEnsemble('${escHtml(m.name)}')">✏ Edit</button>
+      <button class="btn btn-danger" style="padding:4px 10px;font-size:10px;margin-left:auto;" onclick="confirmDeleteEnsemble('${escHtml(m.name)}')">✕ Delete</button>
+    </div>
+  </div>`;
+}
+
+function populateModelSelects() {
+  const combined = [...allModels, ...allEnsembles];
+
+  // ── Multi-checkbox list for detect page ──
+  const list = document.getElementById('d-model-list');
+  if (list) {
+    // Remember currently checked models
+    const prevChecked = new Set(getSelectedModels());
+    list.innerHTML = combined.length
+      ? combined.map(m => `
+        <label class="model-check-item">
+          <input type="checkbox" name="d-model-cb" value="${escHtml(m.name)}"
+            ${prevChecked.has(m.name) || prevChecked.size === 0 && combined.length === 1 ? 'checked' : ''} />
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(m.name)}</span>
+        </label>`).join('')
+      : '<span class="model-check-empty">No models — connect first</span>';
+    list.querySelectorAll('input[type=checkbox]').forEach(cb =>
+      cb.addEventListener('change', _updateModelCount));
+    _updateModelCount();
+  }
+
+  // ── Other selects (stream modal, config, ensemble) ──
+  ['ns-model','cfg-model','ens-step-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = id === 'ens-step-select'
+      ? '<option value="">Add model…</option>'
+      : '<option value="">— select —</option>';
+    combined.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.name; o.textContent = m.name;
+      el.appendChild(o);
+    });
+    if (cur) el.value = cur;
+  });
+}
+
+function confirmDeleteModel(name) {
+  openModal(`Delete model "${name}"?`,
+    `<p style="font-family:var(--font-mono);font-size:12px;color:var(--text2);">This will unload and permanently delete the model directory.</p>`,
+    () => deleteModel(name));
+}
+async function deleteModel(name) {
+  try { await apiFetch(`/models/${name}`,{method:'DELETE'}); toast(`Deleted "${name}"`,'success'); loadModels(); } catch {}
+}
+function confirmDeleteEnsemble(name) {
+  openModal(`Delete ensemble "${name}"?`,'',() => deleteEnsemble(name));
+}
+async function deleteEnsemble(name) {
+  try { await apiFetch(`/ensemble/${name}`,{method:'DELETE'}); toast(`Deleted "${name}"`,'success'); loadModels(); } catch {}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DETECT
+══════════════════════════════════════════════════════════════ */
+function detectWithModel(name) {
+  switchPage('detect');
+  setTimeout(() => {
+    selectAllModels(false);
+    const cb = document.querySelector(`input[name="d-model-cb"][value="${name}"]`);
+    if (cb) { cb.checked = true; _updateModelCount(); }
+    else {
+      loadModels().then(() => {
+        const cb2 = document.querySelector(`input[name="d-model-cb"][value="${name}"]`);
+        if (cb2) { cb2.checked = true; _updateModelCount(); }
+      });
+    }
+  }, 80);
+}
+function handleDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag'); }
+document.addEventListener('dragleave', () => document.getElementById('dropzone').classList.remove('drag'));
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) loadImageFile(f);
+}
+function handleFileSelect(e) { if (e.target.files[0]) loadImageFile(e.target.files[0]); }
+
+function loadImageFile(file) {
+  currentFile = file;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    currentImage = img;
+    const wrap = document.getElementById('canvas-wrap');
+    const pc = document.getElementById('preview-canvas');
+    const oc = document.getElementById('overlay-canvas');
+    const maxW = wrap.parentElement.clientWidth - 28;
+    const maxH = 720;
+    const scale = Math.min(maxW / img.width, maxH / img.height);
+    pc.width  = Math.round(img.width  * scale);
+    pc.height = Math.round(img.height * scale);
+    oc.width = pc.width; oc.height = pc.height;
+    oc.style.width = pc.width + 'px'; oc.style.height = pc.height + 'px';
+    pc.getContext('2d').drawImage(img, 0, 0, pc.width, pc.height);
+    document.getElementById('dropzone').style.display = 'none';
+    wrap.style.display = 'block';
+    document.getElementById('clear-btn').style.display = '';
+    document.getElementById('run-btn').disabled = false;
+    clearResults();
+  };
+  img.src = url;
+}
+
+function clearDetect() {
+  currentFile = null; currentImage = null;
+  document.getElementById('dropzone').style.display = '';
+  document.getElementById('canvas-wrap').style.display = 'none';
+  document.getElementById('clear-btn').style.display = 'none';
+  document.getElementById('run-btn').disabled = true;
+  clearResults();
+}
+function clearResults() {
+  document.getElementById('results-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⬤</div>No results yet</div>';
+  document.getElementById('det-count').textContent = '';
+  document.getElementById('detect-stats').innerHTML = '';
+  const oc = document.getElementById('overlay-canvas');
+  if (oc) oc.getContext('2d').clearRect(0, 0, oc.width, oc.height);
+}
+
+async function runDetect() {
+  const models = getSelectedModels();
+  if (!models.length) { toast('Chọn ít nhất 1 model','error'); return; }
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Running…';
+  clearResults();
+
+  let fileToSend;
+  if (detectMode === 'video') {
+    const vid = document.getElementById('detect-video');
+    if (!vid.src || vid.videoWidth === 0) {
+      toast('Load a video file first','error');
+      btn.disabled = false; btn.textContent = '▶ RUN INFERENCE'; return;
+    }
+    fileToSend = await new Promise(res => {
+      const cap = document.createElement('canvas');
+      cap.width = vid.videoWidth; cap.height = vid.videoHeight;
+      cap.getContext('2d').drawImage(vid, 0, 0);
+      cap.toBlob(b => res(new File([b], 'frame.jpg', {type:'image/jpeg'})), 'image/jpeg', 0.92);
+    });
+  } else {
+    if (!currentFile) { btn.disabled = false; btn.textContent = '▶ RUN INFERENCE'; return; }
+    fileToSend = currentFile;
+  }
+
+  const cls    = document.getElementById('d-classes').value.trim();
+  const imgsz  = document.getElementById('d-imgsz').value || '640';
+  const conf   = document.getElementById('d-conf').value || '0.5';
+  const iou    = document.getElementById('d-iou').value || '0.45';
+  HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+  const t0 = performance.now();
+
+  // Validate YOLOE models
+  const yoloeModels = models.filter(m => m.toLowerCase().includes('yoloe'));
+  if (yoloeModels.length && !cls) {
+    toast(`YOLOE model "${yoloeModels[0]}" requires "classes" (e.g. person,car)`, 'error');
+    btn.disabled = false; btn.textContent = '▶ RUN INFERENCE'; return;
+  }
+
+  try {
+    // Run all models in parallel
+    const results = await Promise.all(models.map(async model => {
+      const form = new FormData();
+      form.append('file', fileToSend);
+      form.append('model', model);
+      if (cls && model.toLowerCase().includes('yoloe')) form.append('prompts', cls);
+      form.append('imgsz', imgsz);
+      form.append('conf', conf);
+      form.append('iou', iou);
+      const r = await fetch(HOST + '/detect', { method:'POST', body:form });
+      if (!r.ok) { const e = await r.json(); throw new Error(`[${model}] ${e.detail||r.statusText}`); }
+      const data = await r.json();
+      // Tag each annotation with source model
+      (data.annotations||[]).forEach(a => { if (!a.source_model) a.source_model = model; });
+      return data;
+    }));
+
+    // Merge annotations from all models
+    const merged = {
+      annotations: results.flatMap(r => r.annotations || []),
+      image_shape: results[0]?.image_shape,
+      inference_imgsz: results[0]?.inference_imgsz,
+    };
+    const ms = (performance.now() - t0).toFixed(0);
+    if (detectMode === 'video') renderVideoDetections(merged, ms);
+    else renderDetections(merged, ms);
+  } catch (e) { toast('Detect error: ' + e.message, 'error'); }
+  btn.disabled = false; btn.textContent = '▶ RUN INFERENCE';
+}
+
+function renderDetections(data, ms) {
+  const anns = data.annotations || [];
+  document.getElementById('det-count').textContent = `${anns.length} detection${anns.length!==1?'s':''}`;
+  document.getElementById('detect-stats').innerHTML = `
+    <div class="infer-stat">time: <span>${ms}ms</span></div>
+    <div class="infer-stat">imgsz: <span>${(data.inference_imgsz||[]).join('×')}</span></div>
+    <div class="infer-stat">shape: <span>${(data.image_shape||[]).join('×')}</span></div>`;
+  if (!anns.length) {
+    document.getElementById('results-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⬤</div>No detections</div>';
+    return;
+  }
+  const catMap = buildCatMap(anns);
+  document.getElementById('results-list').innerHTML = anns.map(a => `
+    <div class="result-item" style="border-left-color:${catMap[a.category_name]}">
+      <span class="result-cat" style="color:${catMap[a.category_name]}">${escHtml(a.category_name)}</span>
+      <span class="result-score">${(a.score*100).toFixed(1)}%</span>
+      <span class="result-bbox">[${a.bbox.map(v=>v.toFixed(0)).join(', ')}]</span>
+      ${a.source_model ? `<span class="source-badge">${escHtml(a.source_model)}</span>` : ''}
+      ${a.segmentation ? `<span class="seg-badge">seg</span>` : ''}
+    </div>`).join('');
+
+  const oc = document.getElementById('overlay-canvas');
+  const ctx = oc.getContext('2d');
+  ctx.clearRect(0, 0, oc.width, oc.height);
+  // Draw on the overlay canvas sized to match the preview canvas display
+  drawAnnotations(ctx, oc.width, oc.height, anns, data.image_shape, catMap);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DETECT MODE / VIDEO / WEBCAM
+══════════════════════════════════════════════════════════════ */
+function setDetectMode(mode) {
+  detectMode = mode;
+  document.querySelectorAll('.detect-mode-btn').forEach((b, i) =>
+    b.classList.toggle('active', ['image','video','webcam'][i] === mode));
+  document.getElementById('detect-image-pane').style.display  = mode === 'image'  ? '' : 'none';
+  document.getElementById('detect-video-pane').style.display  = mode === 'video'  ? 'block' : 'none';
+  document.getElementById('detect-webcam-pane').style.display = mode === 'webcam' ? 'block' : 'none';
+  if (mode !== 'webcam') stopDetectWebcam();
+  if (mode !== 'video')  stopVideoDetect();
+  clearResults();
+  const btn = document.getElementById('run-btn');
+  btn.style.display = mode === 'webcam' ? 'none' : '';
+  if (mode === 'image')  btn.disabled = !currentFile;
+  if (mode === 'video')  btn.disabled = !document.getElementById('detect-video')._objUrl;
+  if (mode === 'webcam') enumerateDetectCameras();
+}
+
+function loadVidFile(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const vid = document.getElementById('detect-video');
+  if (vid._objUrl) URL.revokeObjectURL(vid._objUrl);
+  vid._objUrl = URL.createObjectURL(f);
+  vid.src = vid._objUrl;
+  vid.load();
+  vid.ontimeupdate = _updateVidTime;
+  vid.onended = () => document.getElementById('vid-playpause').textContent = '▶';
+  vid.onloadedmetadata = () => {
+    document.getElementById('vid-seek').max = vid.duration;
+    _updateVidTime();
+    const ov = document.getElementById('detect-video-overlay');
+    ov.width = vid.videoWidth; ov.height = vid.videoHeight;
+  };
+  document.getElementById('vid-dropzone').style.display = 'none';
+  document.getElementById('vid-player-wrap').style.display = '';
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('vid-det-start').disabled = false;
+  document.getElementById('vs1').classList.add('spd-active');
+  ['vs2','vs3','vs4'].forEach(id => document.getElementById(id).classList.remove('spd-active'));
+}
+
+function _updateVidTime() {
+  const vid = document.getElementById('detect-video');
+  document.getElementById('vid-seek').value = vid.currentTime;
+  document.getElementById('vid-time').textContent = _fmtT(vid.currentTime) + ' / ' + _fmtT(vid.duration || 0);
+}
+
+function vidPlayPause() {
+  const vid = document.getElementById('detect-video'), btn = document.getElementById('vid-playpause');
+  if (vid.paused) { vid.play(); btn.textContent = '⏸'; } else { vid.pause(); btn.textContent = '▶'; }
+}
+
+function vidSeek(val) {
+  document.getElementById('detect-video').currentTime = parseFloat(val);
+  const ov = document.getElementById('detect-video-overlay');
+  ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
+}
+
+function vidSpeed(s, el) {
+  document.getElementById('detect-video').playbackRate = s;
+  ['vs1','vs2','vs3','vs4'].forEach(id => document.getElementById(id).classList.remove('spd-active'));
+  if (el) el.classList.add('spd-active');
+}
+
+function vidFullscreen() {
+  const el = document.getElementById('vid-player-wrap');
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (!fn) return;
+  fn.call(el);
+  const onFsChange = () => {
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+    el.classList.toggle('fs-active', !!fsEl);
+    if (!fsEl) {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+      document.removeEventListener('mozfullscreenchange', onFsChange);
+    }
+  };
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
+  document.addEventListener('mozfullscreenchange', onFsChange);
+}
+
+function _fmtT(s) {
+  if (!s || isNaN(s)) return '0:00';
+  return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+}
+
+function renderVideoDetections(data, ms) {
+  const anns = data.annotations || [];
+  document.getElementById('det-count').textContent = `${anns.length} detection${anns.length!==1?'s':''}`;
+  document.getElementById('detect-stats').innerHTML = `
+    <div class="infer-stat">time: <span>${ms}ms</span></div>
+    <div class="infer-stat">imgsz: <span>${(data.inference_imgsz||[]).join('×')}</span></div>
+    <div class="infer-stat">shape: <span>${(data.image_shape||[]).join('×')}</span></div>`;
+  const vid = document.getElementById('detect-video');
+  const ov  = document.getElementById('detect-video-overlay');
+  const vw  = vid.videoWidth  || 640;
+  const vh  = vid.videoHeight || 480;
+  ov.width  = vw;
+  ov.height = vh;
+  const rect = vid.getBoundingClientRect();
+  ov.style.width  = rect.width  + 'px';
+  ov.style.height = rect.height + 'px';
+  const ctx = ov.getContext('2d');
+  ctx.clearRect(0, 0, ov.width, ov.height);
+  if (!anns.length) {
+    document.getElementById('results-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⬤</div>No detections</div>';
+    return;
+  }
+  const catMap = buildCatMap(anns);
+  drawAnnotations(ctx, vw, vh, anns, data.image_shape, catMap);
+  document.getElementById('results-list').innerHTML = anns.map(a => `
+    <div class="result-item" style="border-left-color:${catMap[a.category_name]}">
+      <span class="result-cat" style="color:${catMap[a.category_name]}">${escHtml(a.category_name)}</span>
+      <span class="result-score">${(a.score*100).toFixed(1)}%</span>
+      <span class="result-bbox">[${a.bbox.map(v=>v.toFixed(0)).join(', ')}]</span>
+      ${a.source_model?`<span class="source-badge">${escHtml(a.source_model)}</span>`:''}
+      ${a.segmentation?`<span class="seg-badge">seg</span>`:''}
+    </div>`).join('');
+}
+
+async function startDetectWebcam() {
+  const models = getSelectedModels();
+  if (!models.length) { toast('Chọn ít nhất 1 model','error'); return; }
+  stopDetectWebcam();
+  const deviceId = document.getElementById('webcam-det-device').value;
+  try {
+    const constraint = deviceId === '__env__' ? { facingMode: { exact: 'environment' } }
+                     : deviceId === '__user__' ? { facingMode: { exact: 'user' } }
+                     : deviceId ? { deviceId: { exact: deviceId } }
+                     : true;
+    detectWebcamStream = await navigator.mediaDevices.getUserMedia({ video: constraint, audio: false });
+    detectWebcamVideo = document.createElement('video');
+    detectWebcamVideo.srcObject = detectWebcamStream;
+    detectWebcamVideo.muted = true; detectWebcamVideo.playsInline = true;
+    detectWebcamVideo.play().catch(() => {});
+
+    HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+    const wsHost  = HOST.replace(/^http/,'ws');
+    const imgsz   = document.getElementById('d-imgsz').value || '640';
+    const conf    = document.getElementById('d-conf').value  || '0.5';
+    const classes = document.getElementById('d-classes').value.trim();
+
+    const _annsByModel = {};
+    const _wsList = models.map(model => {
+      let url = `${wsHost}/ws/stream?model=${encodeURIComponent(model)}&fps=10&imgsz=${imgsz}&conf=${conf}`;
+      if (classes && model.toLowerCase().includes('yoloe')) url += `&prompts=${encodeURIComponent(classes)}`;
+      const ws = new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
+      ws.onmessage = ev => {
+        try {
+          const data = JSON.parse(ev.data);
+          const anns = data.annotations || [];
+          anns.forEach(a => { if (!a.source_model) a.source_model = model; delete a._maskCanvas; });
+          _annsByModel[model] = { anns, imgShape: data.image_shape };
+          detectWebcamAnns = Object.values(_annsByModel).flatMap(v => v.anns);
+          detectWebcamImgShape = data.image_shape;
+          detectWebcamAnns.forEach(a => {
+            if (!detectWebcamCatMap[a.category_name])
+              detectWebcamCatMap[a.category_name] = COLORS[Object.keys(detectWebcamCatMap).length % COLORS.length];
+          });
+          document.getElementById('det-count').textContent = detectWebcamAnns.length + ' det';
+          if (_getFireAnns(detectWebcamAnns).length > 0) checkFireAlert(detectWebcamAnns);
+          else clearFireAlert();
+          if (_getCrowdPersons(detectWebcamAnns).length >= CROWD_MIN_PERSONS) checkCrowdAlert(detectWebcamAnns);
+          else clearCrowdAlert();
+          document.getElementById('results-list').innerHTML = detectWebcamAnns.length
+            ? detectWebcamAnns.map(a=>`
+                <div class="result-item" style="border-left-color:${detectWebcamCatMap[a.category_name]}">
+                  <span class="result-cat" style="color:${detectWebcamCatMap[a.category_name]}">${escHtml(a.category_name)}</span>
+                  <span class="result-score">${(a.score*100).toFixed(1)}%</span>
+                  ${a.source_model?`<span class="source-badge">${escHtml(a.source_model)}</span>`:''}
+                </div>`).join('')
+            : '<div class="empty-state"><div class="empty-icon">⬤</div>No detections</div>';
+        } catch {}
+      };
+      return ws;
+    });
+    detectWebcamWs = {
+      _wsList,
+      readyState: 1,
+      close() { this._wsList.forEach(w => w.close()); },
+      send(ab)  { this._wsList.forEach(w => { if (w.readyState === 1) w.send(ab); }); }
+    };
+
+    document.getElementById('webcam-det-start').style.display = 'none';
+    document.getElementById('webcam-det-stop').style.display  = '';
+
+    const canvas = document.getElementById('webcam-detect-canvas');
+    let last = 0;
+    let _wcFrameN = 0;
+    const _wcStride = Math.max(1, parseInt(document.getElementById('d-stride').value) || 1);
+    const loop = ts => {
+      if (!detectWebcamStream) return;
+      detectWebcamLoopId = requestAnimationFrame(loop);
+      if (ts - last < 100) return; last = ts;
+      if (!detectWebcamVideo || detectWebcamVideo.readyState < 2) return;
+      const w = detectWebcamVideo.videoWidth || 640, h = detectWebcamVideo.videoHeight || 480;
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(detectWebcamVideo, 0, 0, w, h);
+      if (detectWebcamAnns.length && detectWebcamImgShape)
+        drawAnnotations(ctx, w, h, detectWebcamAnns, detectWebcamImgShape, detectWebcamCatMap);
+      _wcFrameN++;
+      if (_wcFrameN % _wcStride === 0) {
+        canvas.toBlob(blob => {
+          blob.arrayBuffer().then(ab => detectWebcamWs?.send(ab));
+        }, 'image/jpeg', 0.8);
+      }
+    };
+    detectWebcamLoopId = requestAnimationFrame(loop);
+    toast(`Webcam started — ${models.length} model${models.length>1?'s':''}`, 'success');
+  } catch(e) {
+    toast('Webcam error: ' + e.message,'error');
+    stopDetectWebcam();
+  }
+}
+
+function startVideoDetect() {
+  const models = getSelectedModels();
+  if (!models.length) { toast('Chọn ít nhất 1 model','error'); return; }
+  const vid = document.getElementById('detect-video');
+  if (!vid.src || vid.videoWidth === 0) { toast('Load a video file first','error'); return; }
+  stopVideoDetect();
+  videoDetectCatMap = {};
+  HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+  const wsHost = HOST.replace(/^http/,'ws');
+  const imgsz   = document.getElementById('d-imgsz').value || '640';
+  const conf    = document.getElementById('d-conf').value  || '0.5';
+  const classes = document.getElementById('d-classes').value.trim();
+  const _vidAnnsByModel = {};
+  const _vidWsList = models.map(model => {
+    let url = `${wsHost}/ws/stream?model=${encodeURIComponent(model)}&fps=10&imgsz=${imgsz}&conf=${conf}`;
+    if (classes && model.toLowerCase().includes('yoloe')) url += `&prompts=${encodeURIComponent(classes)}`;
+    const ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
+    ws.onmessage = ev => {
+      try {
+        const data = JSON.parse(ev.data);
+        const anns = data.annotations || [];
+        anns.forEach(a => { if (!a.source_model) a.source_model = model; delete a._maskCanvas; });
+        _vidAnnsByModel[model] = { anns, imgShape: data.image_shape };
+        videoDetectAnns = Object.values(_vidAnnsByModel).flatMap(v => v.anns);
+        videoDetectImgShape = data.image_shape;
+        videoDetectAnns.forEach(a => {
+          if (!videoDetectCatMap[a.category_name])
+            videoDetectCatMap[a.category_name] = COLORS[Object.keys(videoDetectCatMap).length % COLORS.length];
+        });
+        document.getElementById('det-count').textContent = videoDetectAnns.length + ' det';
+        // ── Fire alert ──
+        if (_getFireAnns(videoDetectAnns).length > 0) checkFireAlert(videoDetectAnns);
+        else clearFireAlert();
+        if (_getCrowdPersons(videoDetectAnns).length >= CROWD_MIN_PERSONS) checkCrowdAlert(videoDetectAnns);
+        else clearCrowdAlert();
+        document.getElementById('results-list').innerHTML = videoDetectAnns.length
+          ? videoDetectAnns.map(a => `
+              <div class="result-item" style="border-left-color:${videoDetectCatMap[a.category_name]}">
+                <span class="result-cat" style="color:${videoDetectCatMap[a.category_name]}">${escHtml(a.category_name)}</span>
+                <span class="result-score">${(a.score*100).toFixed(1)}%</span>
+                <span class="result-bbox">[${a.bbox.map(v=>v.toFixed(0)).join(', ')}]</span>
+                ${a.source_model?`<span class="source-badge">${escHtml(a.source_model)}</span>`:''}
+                ${a.segmentation?`<span class="seg-badge">seg</span>`:''}
+              </div>`).join('')
+          : '<div class="empty-state"><div class="empty-icon">⬤</div>No detections</div>';
+      } catch {}
+    };
+    return ws;
+  });
+  videoDetectWs = {
+    _vidWsList,
+    readyState: 1,
+    close() { this._vidWsList.forEach(w => w.close()); },
+    send(ab)  { this._vidWsList.forEach(w => { if (w.readyState === 1) w.send(ab); }); }
+  };
+  document.getElementById('vid-det-start').style.display = 'none';
+  document.getElementById('vid-det-stop').style.display  = '';
+
+  const ov = document.getElementById('detect-video-overlay');
+  let last = 0;
+  let _vdFrameN = 0;
+  const _vdStride = Math.max(1, parseInt(document.getElementById('d-stride').value) || 1);
+  const loop = ts => {
+    if (!videoDetectWs) return;
+    videoDetectLoopId = requestAnimationFrame(loop);
+    if (ts - last < 100) return; last = ts;
+    if (vid.readyState < 2 || vid.paused) return;
+    const w = vid.videoWidth || 640, h = vid.videoHeight || 480;
+    const cap = document.createElement('canvas');
+    cap.width = w; cap.height = h;
+    const cctx = cap.getContext('2d');
+    cctx.drawImage(vid, 0, 0, w, h);
+    ov.width  = w;
+    ov.height = h;
+    const rect = vid.getBoundingClientRect();
+    ov.style.width  = rect.width  + 'px';
+    ov.style.height = rect.height + 'px';
+    const octx = ov.getContext('2d');
+    octx.clearRect(0, 0, ov.width, ov.height);
+    // Draw last annotations on overlay
+    if (videoDetectAnns.length && videoDetectImgShape) {
+      drawAnnotations(octx, w, h, videoDetectAnns, videoDetectImgShape, videoDetectCatMap);
+    }
+    _vdFrameN++;
+    if (_vdFrameN % _vdStride === 0) {
+      cap.toBlob(blob => {
+        blob.arrayBuffer().then(ab => videoDetectWs?.send(ab));
+      }, 'image/jpeg', 0.8);
+    }
+  };
+  videoDetectLoopId = requestAnimationFrame(loop);
+  toast(`Video detect started — ${models.length} model${models.length>1?'s':''}`, 'success');
+}
+
+function stopVideoDetect() {
+  if (videoDetectLoopId) { cancelAnimationFrame(videoDetectLoopId); videoDetectLoopId = null; }
+  if (videoDetectWs)     { videoDetectWs.close(); videoDetectWs = null; }
+  videoDetectAnns = []; videoDetectImgShape = null; videoDetectCatMap = {};
+  clearFireAlert();
+  const ov = document.getElementById('detect-video-overlay');
+  if (ov) ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
+  const s = document.getElementById('vid-det-start'), e = document.getElementById('vid-det-stop');
+  if (s) { s.style.display = ''; }
+  if (e) { e.style.display = 'none'; }
+  // Reset to dropzone state if no video loaded
+  const vid = document.getElementById('detect-video');
+  if (!vid || !vid._objUrl) {
+    const dz = document.getElementById('vid-dropzone');
+    const pw = document.getElementById('vid-player-wrap');
+    if (dz) dz.style.display = '';
+    if (pw) pw.style.display = 'none';
+  }
+}
+
+function webcamDetFullscreen() {
+  const el = document.getElementById('detect-webcam-pane').querySelector('div');
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (fn) fn.call(el);
+}
+
+function tileFullscreen(id) {
+  const wrap = document.getElementById(`canvas-${id}`)?.parentElement;
+  if (!wrap) return;
+  const fn = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.mozRequestFullScreen || wrap.msRequestFullscreen;
+  if (fn) fn.call(wrap);
+}
+
+function stopDetectWebcam() {
+  if (detectWebcamLoopId) { cancelAnimationFrame(detectWebcamLoopId); detectWebcamLoopId = null; }
+  if (detectWebcamWs)     { detectWebcamWs.close(); detectWebcamWs = null; }
+  if (detectWebcamStream) { detectWebcamStream.getTracks().forEach(t => t.stop()); detectWebcamStream = null; }
+  detectWebcamVideo = null; detectWebcamAnns = []; detectWebcamImgShape = null; detectWebcamCatMap = {};
+  clearFireAlert();
+  const s = document.getElementById('webcam-det-start'), e = document.getElementById('webcam-det-stop');
+  if (s) s.style.display = ''; if (e) e.style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RLE SEGMENTATION DECODER
+══════════════════════════════════════════════════════════════ */
+function decodeCOCOrle(rle) {
+  // Returns flat Uint8Array (row-major) [imgH x imgW]
+  const [imgH, imgW] = rle.size;
+  const s = rle.counts;
+  const cnts = [];
+  if (typeof s === 'string') {
+    let p = 0;
+    while (p < s.length) {
+      let x = 0, k = 0, more = 1;
+      while (more) {
+        const c = s.charCodeAt(p) - 48;
+        x |= (c & 0x1f) << (5 * k);
+        more = c & 0x20;
+        p++; k++;
+        if (!more && (c & 0x10)) x |= (-1 << (5 * k));
+      }
+      // pycocotools _mask.c: if(m>2) x += cnts[m-2]  (delta from two positions back)
+      if (cnts.length > 2) x += cnts[cnts.length - 2];
+      cnts.push(x);
+    }
+  } else if (Array.isArray(s)) {
+    cnts.push(...s);
+  }
+  const mask = new Uint8Array(imgH * imgW);
+  let pos = 0, fill = 0;
+  for (const cnt of cnts) {
+    if (fill) {
+      for (let j = 0; j < cnt; j++) {
+        const col = Math.floor(pos / imgH);
+        const row = pos % imgH;
+        if (col < imgW) mask[row * imgW + col] = 1;
+        pos++;
+      }
+    } else {
+      pos += cnt;
+    }
+    fill ^= 1;
+  }
+  return { mask, imgH, imgW };
+}
+
+// getMaskCanvas removed — masks are now rendered at display resolution in drawAnnotations
+// to avoid Android WebView max-canvas-size limits that caused silent blank draws.
+
+/* ══════════════════════════════════════════════════════════════
+   DRAW ANNOTATIONS (single canvas — video frame + overlay)
+══════════════════════════════════════════════════════════════ */
+function buildCatMap(anns) {
+  const m = {};
+  anns.forEach(a => {
+    if (!m[a.category_name]) m[a.category_name] = COLORS[Object.keys(m).length % COLORS.length];
+  });
+  return m;
+}
+
+function drawAnnotations(ctx, canvasW, canvasH, anns, imgShape, catMap) {
+  if (!imgShape || !anns.length) return;
+  const [imgH, imgW] = imgShape;
+  const sx = canvasW / imgW;
+  const sy = canvasH / imgH;
+
+  // Pass 1: segmentation masks — built at *display* resolution so the
+  // intermediate canvas stays small and never hits Android's canvas size cap.
+  const _masksToRender = anns.filter(a => a.segmentation?.counts);
+  if (_masksToRender.length) {
+    const mCanvas = document.createElement('canvas');
+    mCanvas.width = canvasW; mCanvas.height = canvasH;
+    const mCtx = mCanvas.getContext('2d');
+    if (mCtx) {
+      const idata = mCtx.createImageData(canvasW, canvasH);
+      const scaleX = imgW / canvasW;
+      const scaleY = imgH / canvasH;
+      _masksToRender.forEach(a => {
+        const color = catMap[a.category_name] || COLORS[0];
+        const [r, g, b] = hexToRgb(color);
+        try {
+          const { mask, imgH: mH, imgW: mW } = decodeCOCOrle(a.segmentation);
+          for (let py = 0; py < canvasH; py++) {
+            for (let px = 0; px < canvasW; px++) {
+              const mx = Math.min(Math.floor(px * scaleX), mW - 1);
+              const my = Math.min(Math.floor(py * scaleY), mH - 1);
+              if (mask[my * mW + mx]) {
+                const idx = (py * canvasW + px) * 4;
+                idata.data[idx]     = r;
+                idata.data[idx + 1] = g;
+                idata.data[idx + 2] = b;
+                idata.data[idx + 3] = 90;
+              }
+            }
+          }
+        } catch { /* skip malformed mask */ }
+      });
+      mCtx.putImageData(idata, 0, 0);
+      ctx.drawImage(mCanvas, 0, 0); // 1:1 draw — no scaling, safe on all platforms
+    }
+  }
+
+  // Pass 2: bounding boxes + labels
+  ctx.font = 'bold 13px "IBM Plex Mono",monospace';
+  ctx.textBaseline = 'top';
+  anns.forEach(a => {
+    const [x, y, w, h] = a.bbox;
+    const color = catMap[a.category_name] || COLORS[0];
+    const px = x * sx, py = y * sy, pw = w * sx, ph = h * sy;
+
+    // Box — thicker stroke with a dark shadow outline for contrast
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(px, py, pw, ph);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(px, py, pw, ph);
+
+    // Label background + text
+    const label = `${a.category_name} ${(a.score*100).toFixed(0)}%`;
+    const tw = ctx.measureText(label).width + 12;
+    const bh = 22;
+    const ly = py >= bh ? py - bh : py + ph;
+    // Shadow backing for readability
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(px - 1, ly - 1, tw + 2, bh + 2);
+    ctx.fillStyle = color;
+    ctx.fillRect(px, ly, tw, bh);
+    ctx.fillStyle = '#050808';
+    ctx.fillText(label, px + 6, ly + 4);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STREAM ENGINE
+══════════════════════════════════════════════════════════════ */
+class StreamInstance {
+  constructor(cfg) {
+    this.id    = cfg.id;
+    this.name  = cfg.name;
+    this.type  = cfg.type;   // 'webcam' | 'file' | 'hls' | 'ws'
+    this.src   = cfg.src;    // URL string or File object
+    this.model = cfg.model;
+    this.classes = cfg.classes;
+    this.imgsz = cfg.imgsz || 640;
+    this.conf  = cfg.conf  || 0.5;
+    this.fps   = cfg.fps   || 10;
+    this.stride = cfg.stride || 1;
+    this.tab      = cfg.tab;
+    this.deviceId = cfg.deviceId || null;
+
+    this.active = false;
+    this.inferWs   = null;
+    this.srcWs     = null;
+    this.videoEl   = null;
+    this.mediaStream = null;
+    this.loopId    = null;
+
+    this.canvas    = null;
+    this.catColorMap = {};
+    this.lastAnns  = [];
+    this.lastImgShape = null;
+    this.lastResultTime = 0;
+
+    this.fpsCount = 0;
+    this.fpsLast  = Date.now();
+    this.fpsDisplay = 0;
+  }
+
+  async start() {
+    this.active = true;
+    this._renderTile();
+    await this._startSource();
+  }
+
+  async _startSource() {
+    if (this.type === 'webcam') {
+      try {
+        const vidConstraint = this.deviceId === '__env__' ? { facingMode: { exact: 'environment' } }
+                            : this.deviceId === '__user__' ? { facingMode: { exact: 'user' } }
+                            : this.deviceId ? { deviceId: { exact: this.deviceId } }
+                            : true;
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ video: vidConstraint });
+        this.videoEl = document.createElement('video');
+        this.videoEl.srcObject = this.mediaStream;
+        this.videoEl.autoplay = true; this.videoEl.muted = true;
+        this.videoEl.playsInline = true;
+        let _wcStarted = false;
+        const _wcGo = () => { if (!_wcStarted) { _wcStarted = true; this._connectInfer(); this._startVideoLoop(); } };
+        this.videoEl.onloadedmetadata = _wcGo;
+        this.videoEl.play().then(_wcGo).catch(() => {});
+      } catch(e) {
+        toast('Webcam error: ' + e.message, 'error');
+        this._setStoppedUI();
+      }
+
+    } else if (this.type === 'file') {
+      this.videoEl = document.createElement('video');
+      this.videoEl.src = URL.createObjectURL(this.src);
+      this.videoEl.loop = true; this.videoEl.muted = true;
+      this.videoEl.onloadeddata = () => {
+        this.videoEl.play();
+        this._connectInfer();
+        this._startVideoLoop();
+      };
+      this.videoEl.load();
+
+    } else if (this.type === 'hls') {
+      this.videoEl = document.createElement('video');
+      this.videoEl.src = this.src;
+      this.videoEl.autoplay = true; this.videoEl.muted = true;
+      this.videoEl.crossOrigin = 'anonymous';
+      this.videoEl.onloadeddata = () => {
+        this._connectInfer();
+        this._startVideoLoop();
+      };
+      this.videoEl.onerror = () => toast(`HLS error for "${this.name}"`, 'error');
+
+    } else if (this.type === 'ws') {
+      this._connectInfer();
+      try {
+        this.srcWs = new WebSocket(this.src);
+        this.srcWs.binaryType = 'arraybuffer';
+        this.srcWs.onopen = () => this._setBorder('live');
+        this.srcWs.onerror = () => toast(`WS error for "${this.name}"`, 'error');
+        this.srcWs.onmessage = (e) => this._onWsFrame(e.data);
+      } catch(e) { toast('WS connect error: ' + e.message, 'error'); this._setStoppedUI(); }
+    }
+  }
+
+  // Dừng inference nhưng giữ tile
+  stop() {
+    if (!this.active) return;
+    this.active = false;
+    if (this.loopId)      { cancelAnimationFrame(this.loopId); this.loopId = null; }
+    if (this.inferWs)     { this.inferWs.close(); this.inferWs = null; }
+    if (this.srcWs)       { this.srcWs.close();   this.srcWs   = null; }
+    if (this.mediaStream) { this.mediaStream.getTracks().forEach(t => t.stop()); this.mediaStream = null; }
+    if (this.videoEl)     { this.videoEl.pause(); }
+    // Fire cleanup
+    streamFireFrames[this.id] = 0;
+    const anyFire = [...streams.values()].filter(s => s.id !== this.id)
+                      .some(s => (streamFireFrames[s.id] || 0) >= STREAM_FIRE_CONFIRM);
+    if (!anyFire) clearFireAlert();
+    const badge = document.getElementById(`fire-badge-${this.id}`);
+    if (badge) badge.classList.remove('show');
+    streamCrowdFrames[this.id] = 0;
+    const crowdBadge = document.getElementById(`crowd-badge-${this.id}`);
+    if (crowdBadge) crowdBadge.classList.remove('show');
+    const anyCrowd = [...streams.values()].filter(s => s.id !== this.id)
+                      .some(s => (streamCrowdFrames[s.id]||0) >= CROWD_CONFIRM_FRAMES);
+    if (!anyCrowd) clearCrowdAlert();
+    this._setStoppedUI();
+  }
+
+  // Khởi động lại stream đã dừng
+  async resume() {
+    if (this.active) return;
+    this.active = true;
+    // Dọn video element cũ (trừ file — giữ src)
+    if (this.videoEl && this.type !== 'file') {
+      if (this.videoEl.src && this.type !== 'file') URL.revokeObjectURL(this.videoEl.src);
+      this.videoEl = null;
+    }
+    this._setRunningUI();
+    await this._startSource();
+    toast(`"${this.name}" — đã khởi động lại`, 'success');
+  }
+
+  // Xóa hẳn tile khỏi giao diện
+  remove() {
+    this.active = false;
+    if (this.loopId)      cancelAnimationFrame(this.loopId);
+    if (this.inferWs)     { this.inferWs.close(); this.inferWs = null; }
+    if (this.srcWs)       { this.srcWs.close();   this.srcWs   = null; }
+    if (this.mediaStream) { this.mediaStream.getTracks().forEach(t => t.stop()); this.mediaStream = null; }
+    if (this.videoEl)     { this.videoEl.pause(); if (this.videoEl.src) URL.revokeObjectURL(this.videoEl.src); this.videoEl = null; }
+    streamFireFrames[this.id] = 0;
+    const anyFire = [...streams.values()].filter(s => s.id !== this.id)
+                      .some(s => (streamFireFrames[s.id] || 0) >= STREAM_FIRE_CONFIRM);
+    if (!anyFire) clearFireAlert();
+    const tile = document.getElementById(`tile-${this.id}`);
+    if (tile) tile.remove();
+    streams.delete(this.id);
+    updateStreamEmpty(this.tab);
+    updateStopAllBtn(this.tab);
+  }
+
+  _setStoppedUI() {
+    const overlay = document.getElementById(`tile-stopped-${this.id}`);
+    if (overlay) overlay.classList.add('show');
+    const btn = document.getElementById(`tile-stopbtn-${this.id}`);
+    if (btn) { btn.textContent = '▶ Start'; btn.style.background = '#22c55e99'; }
+    btn?.removeEventListener('click', btn._stopHandler);
+    btn._stopHandler = () => this.resume();
+    btn?.addEventListener('click', btn._stopHandler);
+    this._setBorder('idle');
+    const detEl = document.getElementById(`det-${this.id}`);
+    if (detEl) detEl.textContent = '';
+    const cntEl = document.getElementById(`tile-det-cnt-${this.id}`);
+    if (cntEl) cntEl.textContent = '';
+    const detsEl = document.getElementById(`tile-dets-${this.id}`);
+    if (detsEl) detsEl.innerHTML = '<div class="tile-no-det">Đã dừng</div>';
+  }
+
+  _setRunningUI() {
+    const overlay = document.getElementById(`tile-stopped-${this.id}`);
+    if (overlay) overlay.classList.remove('show');
+    const btn = document.getElementById(`tile-stopbtn-${this.id}`);
+    if (btn) {
+      btn.textContent = '■ Stop';
+      btn.style.background = '#f8717199';
+      btn.onclick = () => this.stop();
+    }
+    this._setBorder('live');
+  }
+
+  _connectInfer() {
+    HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+    const wsHost = HOST.replace(/^http/, 'ws');
+    let url = `${wsHost}/ws/stream?model=${encodeURIComponent(this.model)}&fps=${this.fps}&imgsz=${this.imgsz}&conf=${this.conf}`;
+    if (this.classes && this.model.toLowerCase().includes('yoloe')) url += `&prompts=${encodeURIComponent(this.classes)}`;
+    try {
+      this.inferWs = new WebSocket(url);
+      this.inferWs.binaryType = 'arraybuffer';
+      this.inferWs.onopen  = () => this._setBorder('live');
+      this.inferWs.onmessage = (e) => {
+        try { this._onInferResult(JSON.parse(e.data)); } catch {}
+      };
+      this.inferWs.onerror = () => this._setBorder('error');
+      this.inferWs.onclose = () => { if (this.active) this._setBorder('idle'); };
+    } catch(e) { toast('Infer WS failed: ' + e.message, 'error'); }
+  }
+
+ _startVideoLoop() {
+    const interval = 1000 / this.fps;
+    let last = 0;
+    let _frameN = 0;
+    const loop = (ts) => {
+      if (!this.active) return;
+      this.loopId = requestAnimationFrame(loop);
+      if (ts - last < interval) return;
+      last = ts;
+      const src = this.videoEl;
+      if (!src || src.readyState < 2) return;
+      const w = src.videoWidth || 640;
+      const h = src.videoHeight || 480;
+      if (this.canvas.width !== w) this.canvas.width = w;
+      if (this.canvas.height !== h) this.canvas.height = h;
+      const ctx = this.canvas.getContext('2d');
+      ctx.drawImage(src, 0, 0, w, h);
+      // Draw last known annotations; clear if no result for >2 s
+      if (this.lastAnns.length && this.lastImgShape) {
+        if (Date.now() - this.lastResultTime > 2000) {
+          this.lastAnns = [];
+        } else {
+          drawAnnotations(ctx, w, h, this.lastAnns, this.lastImgShape, this.catColorMap);
+        }
+      }
+      // Send frame to inference server
+      _frameN++;
+      if (_frameN % this.stride === 0) {
+        this.canvas.toBlob(blob => {
+          if (this.inferWs?.readyState === 1) {
+            blob.arrayBuffer().then(ab => this.inferWs.send(ab));
+          }
+        }, 'image/jpeg', 0.8);
+      }
+    };
+    this.loopId = requestAnimationFrame(loop);
+  }
+
+  async _onWsFrame(data) {
+    if (!this.active) return;
+    if (!this._wsFrameN) this._wsFrameN = 0;
+    this._wsFrameN++;
+    try {
+      const bitmap = await createImageBitmap(new Blob([data], {type:'image/jpeg'}));
+      if (this.canvas.width !== bitmap.width) this.canvas.width = bitmap.width;
+      if (this.canvas.height !== bitmap.height) this.canvas.height = bitmap.height;
+      const ctx = this.canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      if (this.lastAnns.length && this.lastImgShape) {
+        drawAnnotations(ctx, this.canvas.width, this.canvas.height, this.lastAnns, this.lastImgShape, this.catColorMap);
+      }
+      // Forward frame to inference server
+      if (this.inferWs?.readyState === 1 && this._wsFrameN % this.stride === 0) this.inferWs.send(data);
+    } catch {}
+  }
+
+  _onInferResult(data) {
+    const anns = data.annotations || [];
+    this.lastAnns.forEach(a => { delete a._maskCanvas; });
+    this.lastAnns      = anns;
+    this.lastImgShape  = data.image_shape;
+    this.lastResultTime = Date.now();
+    anns.forEach(a => {
+      if (!this.catColorMap[a.category_name])
+        this.catColorMap[a.category_name] = COLORS[Object.keys(this.catColorMap).length % COLORS.length];
+    });
+
+    // Badge nhỏ trên canvas
+    const detEl = document.getElementById(`det-${this.id}`);
+    if (detEl) detEl.textContent = anns.length ? `${anns.length} det` : '';
+
+    // Sidebar — danh sách detections
+    const detsEl  = document.getElementById(`tile-dets-${this.id}`);
+    const cntEl   = document.getElementById(`tile-det-cnt-${this.id}`);
+    if (detsEl) {
+      if (cntEl) cntEl.textContent = anns.length ? `(${anns.length})` : '';
+      detsEl.innerHTML = anns.length
+        ? anns.map(a => `
+            <div class="tile-det-row" style="border-left-color:${this.catColorMap[a.category_name]}">
+              <span class="tile-det-cat" style="color:${this.catColorMap[a.category_name]}">${escHtml(a.category_name)}</span>
+              <span class="tile-det-sc">${(a.score * 100).toFixed(0)}%</span>
+            </div>`).join('')
+        : '<div class="tile-no-det">No detections</div>';
+    }
+
+    // FPS counter
+    this.fpsCount++;
+    const now = Date.now();
+    if (now - this.fpsLast >= 1000) {
+      this.fpsDisplay = this.fpsCount;
+      this.fpsCount = 0; this.fpsLast = now;
+      const fpsEl = document.getElementById(`fps-${this.id}`);
+      if (fpsEl) fpsEl.textContent = this.fpsDisplay + ' fps';
+    }
+
+    // Fire check mỗi frame
+    checkStreamFireAlert(this, anns);
+    // Crowd check mỗi frame
+    checkStreamCrowdAlert(this, anns);
+  }
+
+  _renderTile() {
+    const gridId  = this.tab === 'rtsp' ? 'rtsp-grid'  : 'stream-grid';
+    const emptyId = this.tab === 'rtsp' ? 'rtsp-empty' : 'stream-empty';
+    const grid    = document.getElementById(gridId);
+    const emptyEl = document.getElementById(emptyId);
+    if (emptyEl) emptyEl.remove();
+
+    const tile = document.createElement('div');
+    tile.className = 'stream-tile';
+    tile.id = `tile-${this.id}`;
+    tile.innerHTML = `
+      <div class="tile-main">
+        <div class="tile-canvas-wrap">
+          <canvas class="tile-canvas" id="canvas-${this.id}" style="min-height:140px;"></canvas>
+          <div class="tile-placeholder" id="ph-${this.id}">
+            <span class="spin" style="font-size:18px;">⟳</span><span>Connecting…</span>
+          </div>
+          <div class="tile-status-bar">
+            <span class="live-badge">LIVE</span>
+            <span class="fps-badge" id="fps-${this.id}">— fps</span>
+          </div>
+          <span class="tile-det-badge" id="det-${this.id}"></span>
+        <span class="tile-fire-badge" id="fire-badge-${this.id}"></span>
+        <span class="tile-crowd-badge" id="crowd-badge-${this.id}"></span>
+        <div class="tile-stopped-overlay" id="tile-stopped-${this.id}">
+          <span style="font-size:28px;opacity:.5;">⏹</span>
+          <span>Stream đã dừng</span>
+          <button class="tile-restart-btn" onclick="streams.get('${this.id}')?.resume()">▶ Khởi động lại</button>
+        </div>
+        <button class="tile-sb-toggle" id="tile-sb-toggle-${this.id}" title="Hiện sidebar" onclick="toggleTileSidebar('${this.id}')">▶</button>
+        <button class="tile-stop-btn" onclick="tileFullscreen('${this.id}')" style="right:72px;background:#00000099;color:#fff;">⛶</button>
+        <button class="tile-stop-btn" id="tile-stopbtn-${this.id}" onclick="streams.get('${this.id}')?.stop()">■ Stop</button>
+        </div>
+        <div class="tile-footer">
+          <span class="tile-name">${escHtml(this.name)}</span>
+          <span class="tile-model-tag" id="tile-modeltag-${this.id}">${escHtml(this.model)}</span>
+          <button onclick="streams.get('${this.id}')?.remove()"
+            style="margin-left:auto;padding:2px 8px;border:1px solid #f8717144;background:transparent;
+            color:var(--red);border-radius:var(--radius);font-family:var(--font-mono);font-size:9px;cursor:pointer;"
+            title="Xóa stream">✕ Xóa</button>
+        </div>
+      </div>
+      <div class="tile-sidebar collapsed">
+        <div class="tile-sb-section">
+          <div class="tile-sb-title">Parameters</div>
+          <div class="tile-p-row" style="align-items:flex-start;margin-bottom:6px;">
+            <span class="tile-p-lbl" style="padding-top:3px;">model</span>
+            <select class="tile-p-inp" id="tm-${this.id}" style="padding:2px 4px;font-size:9px;">
+              ${[...allModels,...allEnsembles].map(m =>
+                `<option value="${escHtml(m.name)}"${m.name===this.model?' selected':''}>${escHtml(m.name)}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="tile-p-row">
+            <span class="tile-p-lbl">conf</span>
+            <input class="tile-p-inp" id="tc-${this.id}" type="number" min="0" max="1" step="0.05" value="${this.conf}" />
+          </div>
+          <div class="tile-p-row">
+            <span class="tile-p-lbl">imgsz</span>
+            <input class="tile-p-inp" id="ti-${this.id}" value="${this.imgsz}" />
+          </div>
+            <div class="tile-p-row">
+            <span class="tile-p-lbl">stride</span>
+            <input class="tile-p-inp" id="ts-${this.id}" type="number" min="1" max="30" step="1" value="${this.stride}" title="Infer mỗi N frame" />
+          </div>
+          <div class="tile-p-row">
+            <span class="tile-p-lbl">classes</span>
+            <input class="tile-p-inp" id="tcl-${this.id}" value="${escHtml(this.classes||'')}" placeholder="YOLOE only" />
+          </div>
+          <button class="tile-apply-btn" onclick="applyStreamParams('${this.id}')">⟳ Apply</button>
+        </div>
+       <div class="tile-sb-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-bottom:none;padding-bottom:0;">
+          <div class="tile-sb-title">
+            Detections
+            <span class="tile-sb-count" id="tile-det-cnt-${this.id}"></span>
+          </div>
+          <div class="tile-dets-list" id="tile-dets-${this.id}">
+            <div class="tile-no-det">Waiting…</div>
+          </div>
+        </div>
+      </div>`;
+    grid.appendChild(tile);
+    this.canvas = document.getElementById(`canvas-${this.id}`);
+
+    const pollId = setInterval(() => {
+      if (this.canvas && this.canvas.width > 0) {
+        const ph = document.getElementById(`ph-${this.id}`);
+        if (ph) ph.style.display = 'none';
+        this._setBorder('live');
+        clearInterval(pollId);
+      }
+    }, 200);
+  }
+
+  _setBorder(state) {
+    const tile = document.getElementById(`tile-${this.id}`);
+    if (!tile) return;
+    if (state === 'live')  tile.style.borderColor = 'var(--accent-border)';
+    else if (state === 'error') tile.style.borderColor = 'var(--red)';
+    else tile.style.borderColor = 'var(--border)';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STREAM UI HELPERS
+══════════════════════════════════════════════════════════════ */
+function setGridCols(tab, cols) {
+  const gridId = tab === 'rtsp' ? 'rtsp-grid' : 'stream-grid';
+  const btnGroupId = tab + '-layout-btns';
+  document.getElementById(gridId).style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  document.querySelectorAll(`#${btnGroupId} .layout-btn`).forEach((b,i) => {
+    b.classList.toggle('active', i+1 === cols);
+  });
+}
+
+function toggleTileSidebar(id) {
+  const sidebar = document.querySelector(`#tile-${id} .tile-sidebar`);
+  const btn     = document.getElementById(`tile-sb-toggle-${id}`);
+  if (!sidebar) return;
+  const collapsed = sidebar.classList.toggle('collapsed');
+  if (btn) btn.textContent = collapsed ? '▶' : '◧';
+  btn?.setAttribute('title', collapsed ? 'Hiện sidebar' : 'Ẩn sidebar');
+}
+
+function updateStreamEmpty(tab) {
+  const gridId = tab === 'rtsp' ? 'rtsp-grid' : 'stream-grid';
+  const emptyId = tab === 'rtsp' ? 'rtsp-empty' : 'stream-empty';
+  const grid = document.getElementById(gridId);
+  const hasStreams = [...streams.values()].some(s => s.tab === tab);
+  if (!hasStreams && !document.getElementById(emptyId)) {
+    const div = document.createElement('div');
+    div.className = 'stream-empty';
+    div.id = emptyId;
+    div.innerHTML = tab === 'rtsp'
+      ? '<div class="empty-icon">📡</div><div>No RTSP streams active</div>'
+      : '<div class="empty-icon">📷</div><div>No streams active</div>';
+    grid.appendChild(div);
+  }
+}
+
+function updateStopAllBtn(tab) {
+  const btnId = tab + '-stop-all';
+  const hasActive = [...streams.values()].some(s => s.tab === tab);
+  document.getElementById(btnId).style.display = hasActive ? '' : 'none';
+}
+
+function stopAllStreams(tab) {
+  [...streams.values()].filter(s => s.tab === tab).forEach(s => s.remove());
+}
+
+function applyStreamParams(id) {
+  const inst = streams.get(id);
+  if (!inst) return;
+
+  const newModel = document.getElementById(`tm-${id}`)?.value || inst.model;
+  const modelChanged = newModel !== inst.model;
+
+  inst.model   = newModel;
+  inst.conf    = parseFloat(document.getElementById(`tc-${id}`)?.value)  || inst.conf;
+  inst.imgsz   = parseInt(document.getElementById(`ti-${id}`)?.value)    || inst.imgsz;
+  inst.classes = document.getElementById(`tcl-${id}`)?.value.trim()      || '';
+  inst.stride  = Math.max(1, parseInt(document.getElementById(`ts-${id}`)?.value) || inst.stride);
+
+  // Cập nhật model tag ở footer
+  const tag = document.querySelector(`#tile-${id} .tile-model-tag`);
+  if (tag) tag.textContent = inst.model;
+
+  // Reset màu nếu đổi model
+  if (modelChanged) {
+    inst.catColorMap = {};
+    inst.lastAnns = [];
+    const detsEl = document.getElementById(`tile-dets-${id}`);
+    if (detsEl) detsEl.innerHTML = '<div class="tile-no-det">Waiting…</div>';
+  }
+
+  // Ngắt WS cũ và kết nối lại với params mới
+  if (inst.inferWs) { inst.inferWs.close(); inst.inferWs = null; }
+  inst._connectInfer();
+
+  toast(`"${inst.name}" → ${inst.model} (conf ${inst.conf})`, 'success');
+}
+/* ══════════════════════════════════════════════════════════════
+   ADD STREAM MODAL
+══════════════════════════════════════════════════════════════ */
+function openAddStream(tab) {
+  addStreamTab = 'stream';
+  document.getElementById('add-stream-title').textContent = 'Add Stream';
+  onSourceChange();
+  populateModelSelects();
+  document.getElementById('ns-name').value = '';
+  document.getElementById('ns-classes').value = '';
+  document.getElementById('ns-imgsz').value = '640';
+  document.getElementById('ns-conf').value = '0.5';
+  document.getElementById('ns-fps').value = '10';
+  nsSelectedFile = null;
+  document.getElementById('ns-file-label').textContent = '';
+  document.getElementById('add-stream-modal').classList.add('open');
+}
+
+function closeAddStream() {
+  document.getElementById('add-stream-modal').classList.remove('open');
+}
+
+function onSourceChange() {
+  const src = document.getElementById('ns-source').value;
+  document.getElementById('ns-ws-row').style.display     = src === 'ws'     ? '' : 'none';
+  document.getElementById('ns-hls-row').style.display    = src === 'hls'    ? '' : 'none';
+  document.getElementById('ns-webcam-row').style.display = src === 'webcam' ? '' : 'none';
+  document.getElementById('ns-file-row').style.display   = src === 'file'   ? '' : 'none';
+  document.getElementById('ns-rtsp-note').style.display  = (src === 'ws' || src === 'hls') ? 'block' : 'none';
+  if (src === 'webcam') enumerateCameras();
+}
+
+async function _enumerateCamerasInto(sel) {
+  if (!navigator.mediaDevices) {
+    sel.innerHTML = '<option value="">Camera not available (need HTTPS)</option>';
+    toast('Camera requires HTTPS or localhost', 'error');
+    return;
+  }
+  try {
+    // Request permission first — this makes enumerateDevices return real labels
+    const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    tmp.getTracks().forEach(t => t.stop());
+  } catch (e) {
+    // Permission denied or no camera — still try to enumerate
+    toast('Camera permission denied or no camera found', 'error');
+    sel.innerHTML = '<option value="">Default Camera</option>';
+    return;
+  }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    if (cams.length && cams.some(d => d.deviceId)) {
+      sel.innerHTML = cams.map((d, i) =>
+        `<option value="${d.deviceId}">${d.label || 'Camera ' + (i + 1)}</option>`).join('');
+    } else {
+      // Mobile fallback only — desktop gets default
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+      sel.innerHTML = isMobile
+        ? `<option value="__env__">Back Camera</option>
+           <option value="__user__">Front Camera</option>`
+        : `<option value="">Default Camera</option>`;
+    }
+  } catch {
+    sel.innerHTML = '<option value="">Default Camera</option>';
+  }
+}
+
+async function enumerateCameras() {
+  await _enumerateCamerasInto(document.getElementById('ns-webcam-device'));
+}
+
+async function enumerateDetectCameras() {
+  await _enumerateCamerasInto(document.getElementById('webcam-det-device'));
+}
+
+function onFileSelect(e) {
+  nsSelectedFile = e.target.files[0];
+  if (nsSelectedFile) document.getElementById('ns-file-label').textContent = nsSelectedFile.name;
+}
+
+function addStream() {
+  const name  = document.getElementById('ns-name').value.trim() || `Stream ${streamIdCounter+1}`;
+  const model = document.getElementById('ns-model').value;
+  if (!model) { toast('Select a model','error'); return; }
+
+  const src     = document.getElementById('ns-source').value;
+  const classes = document.getElementById('ns-classes').value.trim();
+  if (!classes && model.toLowerCase().includes('yoloe')) {
+    toast('YOLOE model requires "classes" (e.g. person,car)', 'error'); return;
+  }
+  const imgsz   = parseInt(document.getElementById('ns-imgsz').value) || 640;
+  const conf    = parseFloat(document.getElementById('ns-conf').value) || 0.5;
+  const fps     = parseInt(document.getElementById('ns-fps').value) || 10;
+  const stride  = Math.max(1, parseInt(document.getElementById('ns-stride').value) || 1);
+
+  let type, sourceSrc, deviceId;
+  if (src === 'webcam') {
+    type = 'webcam'; sourceSrc = null;
+    deviceId = document.getElementById('ns-webcam-device').value || null;
+  } else if (src === 'file') {
+    if (!nsSelectedFile) { toast('Choose a video file','error'); return; }
+    type = 'file'; sourceSrc = nsSelectedFile;
+  } else if (src === 'ws') {
+    const url = document.getElementById('ns-ws-url').value.trim();
+    if (!url) { toast('Enter WebSocket URL','error'); return; }
+    type = 'ws'; sourceSrc = url;
+  } else if (src === 'hls') {
+    const url = document.getElementById('ns-hls-url').value.trim();
+    if (!url) { toast('Enter HLS URL','error'); return; }
+    type = 'hls'; sourceSrc = url;
+  }
+
+  const id = String(++streamIdCounter);
+  const instance = new StreamInstance({ id, name, type, src: sourceSrc, model, classes, imgsz, conf, fps, stride, tab: addStreamTab, deviceId });
+  streams.set(id, instance);
+  instance.start();
+  closeAddStream();
+  updateStopAllBtn(addStreamTab);
+  toast(`Stream "${name}" starting…`, 'success');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODEL UPLOAD
+══════════════════════════════════════════════════════════════ */
+function handleUploadDragOver(e) { e.preventDefault(); document.getElementById('upload-dropzone').classList.add('drag'); }
+document.addEventListener('dragleave', () => document.getElementById('upload-dropzone').classList.remove('drag'));
+function handleUploadDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-dropzone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) setUploadFile(f);
+}
+function handleModelFileSelect(e) { if (e.target.files[0]) setUploadFile(e.target.files[0]); }
+function setUploadFile(f) {
+  uploadModelFile = f;
+  document.getElementById('upload-filename').textContent = f.name;
+  document.getElementById('up-name').placeholder = f.name.replace(/\.(pt|pth)$/, '');
+  document.getElementById('upload-btn').disabled = false;
+}
+
+async function uploadModel() {
+  if (!uploadModelFile) return;
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Uploading…';
+  const pw = document.getElementById('upload-progress-wrap');
+  const pb = document.getElementById('upload-progress');
+  pw.style.display = 'block'; pb.style.width = '10%';
+  try {
+    const form = new FormData();
+    form.append('file', uploadModelFile);
+    const name = document.getElementById('up-name').value.trim();
+    if (name) form.append('name', name);
+    const gpus = document.getElementById('up-gpus').value.trim();
+    if (gpus) form.append('gpus', gpus);
+    form.append('imgsz', document.getElementById('up-imgsz').value || '640');
+    form.append('overwrite', document.getElementById('up-overwrite').checked ? 'true' : 'false');
+    form.append('dynamic', document.getElementById('up-dynamic').checked ? 'true' : 'false');
+    form.append('yoloe_dynamic', document.getElementById('up-yoloe').checked ? 'true' : 'false');
+    pb.style.width = '40%';
+    HOST = document.getElementById('host-input').value.replace(/\/$/, '');
+    const r = await fetch(HOST + '/models/upload', { method:'POST', body:form });
+    pb.style.width = '80%';
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || r.statusText); }
+    const data = await r.json();
+    pb.style.width = '100%';
+    toast(`Model "${data.model}" loaded (${data.type})`,'success');
+    setTimeout(() => { pw.style.display='none'; pb.style.width='0%'; }, 800);
+    loadModels();
+    uploadModelFile = null;
+    document.getElementById('upload-filename').textContent = 'Drag .pt / .pth here or click';
+    document.getElementById('model-file-input').value = '';
+  } catch (e) {
+    toast('Upload failed: ' + e.message,'error');
+    pb.style.width = '0%';
+    setTimeout(() => { pw.style.display='none'; }, 400);
+  }
+  btn.disabled = false; btn.textContent = '⬆ UPLOAD & EXPORT';
+}
+
+function modelCard(m) {
+  const state = m.state || 'READY';
+  const cls = state==='READY'?'badge-green':state==='LOADING'?'badge-yellow':'badge-red';
+  return `<div class="model-card">
+    <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <div>
+        <div class="model-card-title">${escHtml(m.name)}</div>
+        <div class="model-card-meta">${m.platform || m.kind || 'onnx'}</div>
+      </div>
+      <span class="badge ${cls}" style="margin-left:auto;">${state}</span>
+    </div>
+    <div class="model-card-actions">
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:10px;" onclick="detectWithModel('${escHtml(m.name)}')">▶ Detect</button>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:10px;" onclick="openModelConfig('${escHtml(m.name)}')">⚙ Config</button>
+      <button class="btn btn-danger" style="padding:4px 10px;font-size:10px;margin-left:auto;" onclick="confirmDeleteModel('${escHtml(m.name)}')">✕ Delete</button>
+    </div>
+  </div>`;
+}
+/* ══════════════════════════════════════════════════════════════
+   ENSEMBLE
+══════════════════════════════════════════════════════════════ */
+function addEnsStep() {
+  const sel = document.getElementById('ens-step-select');
+  const name = sel.value;
+  if (!name) return;
+  ensSteps.push({ model:name, version:-1 });
+  renderEnsSteps();
+}
+function renderEnsSteps() {
+  document.getElementById('ens-steps').innerHTML = ensSteps.length
+    ? ensSteps.map((s,i) => `
+      <div class="ens-step">
+        <span class="ens-step-label">${i+1}. ${escHtml(s.model)}</span>
+        <span class="ens-step-ver">v${s.version===-1?'latest':s.version}</span>
+        <button class="ens-step-remove" onclick="removeEnsStep(${i})">✕</button>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:8px;">No steps added yet</div>';
+}
+function removeEnsStep(i) { ensSteps.splice(i,1); renderEnsSteps(); }
+async function createEnsemble() {
+  const name = document.getElementById('ens-name').value.trim();
+  if (!name) { toast('Enter ensemble name','error'); return; }
+  if (!ensSteps.length) { toast('Add at least one model step','error'); return; }
+  try {
+    if (editingEnsemble) {
+      await apiFetch(`/ensemble/${editingEnsemble}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({steps:ensSteps})
+      });
+      toast(`Ensemble "${editingEnsemble}" đã cập nhật`,'success');
+    } else {
+      const data = await apiFetch('/ensemble/create', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name, steps:ensSteps})
+      });
+      toast(`Ensemble "${data.name||name}" created`,'success');
+    }
+    cancelEnsembleEdit();
+    loadModels();
+  } catch {}
+}
+
+function editEnsemble(name) {
+  const ens = allEnsembles.find(e => e.name === name);
+  if (!ens) { toast('Không tìm thấy ensemble','error'); return; }
+  editingEnsemble = name;
+  document.getElementById('ens-name').value = name;
+  document.getElementById('ens-name').disabled = true;
+  ensSteps = (ens.steps || []).map(s =>
+    typeof s === 'string' ? {model:s, version:-1} : {model: s.model||s.name||s, version: s.version??-1}
+  );
+  renderEnsSteps();
+  const title = document.getElementById('ens-panel-title');
+  if (title) title.textContent = `Edit: ${name}`;
+  const submitBtn = document.getElementById('ens-submit-btn');
+  if (submitBtn) submitBtn.textContent = 'UPDATE ENSEMBLE';
+  const cancelBtn = document.getElementById('ens-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = '';
+  // Scroll to right panel
+  document.querySelector('#page-ensemble').scrollIntoView({behavior:'smooth',block:'start'});
+  toast(`Đang chỉnh sửa "${name}" — sửa steps rồi nhấn UPDATE`, 'info');
+}
+
+function cancelEnsembleEdit() {
+  editingEnsemble = null;
+  ensSteps = [];
+  renderEnsSteps();
+  const nameEl = document.getElementById('ens-name');
+  if (nameEl) { nameEl.value = ''; nameEl.disabled = false; }
+  const title = document.getElementById('ens-panel-title');
+  if (title) title.textContent = 'Create Ensemble';
+  const submitBtn = document.getElementById('ens-submit-btn');
+  if (submitBtn) submitBtn.textContent = 'CREATE ENSEMBLE';
+  const cancelBtn = document.getElementById('ens-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+async function addStepToEnsemble(ensName) {
+  const sel = document.getElementById(`add-step-select-${ensName}`);
+  const modelName = sel?.value;
+  if (!modelName) { toast('Chọn model để thêm','error'); return; }
+  const ens = allEnsembles.find(e => e.name === ensName);
+  if (!ens) return;
+  const steps = [...(ens.steps||[]), {model: modelName, version:-1}];
+  try {
+    await apiFetch(`/ensemble/${ensName}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({steps})
+    });
+    toast(`Đã thêm "${modelName}" vào "${ensName}"`, 'success');
+    loadModels();
+  } catch {}
+}
+
+async function removeStepFromEnsemble(ensName, stepIdx) {
+  const ens = allEnsembles.find(e => e.name === ensName);
+  if (!ens) return;
+  const steps = (ens.steps || []).filter((_, i) => i !== stepIdx);
+  try {
+    await apiFetch(`/ensemble/${ensName}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({steps})
+    });
+    toast(`Đã xóa step ${stepIdx+1} khỏi "${ensName}"`, 'success');
+    loadModels();
+  } catch {}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONFIG / LABELS (improved)
+══════════════════════════════════════════════════════════════ */
+function openModelConfig(name) {
+  switchPage('system');
+  document.getElementById('cfg-model').value = name;
+  loadConfig();
+}
+
+async function loadConfig() {
+  const model = document.getElementById('cfg-model').value;
+  if (!model) return;
+  document.getElementById('cfg-editor').value = '';
+  document.getElementById('instances-editor').value = '';
+  document.getElementById('labels-list').innerHTML = '<div class="empty-state" style="padding:12px;">Loading…</div>';
+  try {
+    const cfg = await apiFetch(`/models/${model}/config`);
+    document.getElementById('cfg-editor').value = JSON.stringify(cfg, null, 2);
+  } catch { document.getElementById('cfg-editor').value = '// Could not load config'; }
+  try {
+    const inst = await apiFetch(`/models/${model}/instances`);
+    document.getElementById('instances-editor').value = JSON.stringify(inst, null, 2);
+  } catch {}
+  try {
+    const lbl = await apiFetch(`/models/${model}/labels`);
+    renderLabels(lbl.labels || []);
+  } catch { renderLabels([]); }
+}
+
+function renderLabels(labels) {
+  const list = document.getElementById('labels-list');
+  list.innerHTML = '';
+  if (!labels.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:12px;">No labels — click + Add Label</div>';
+    return;
+  }
+  labels.forEach(l => _appendLabelRow(list, l));
+}
+
+function _appendLabelRow(list, val) {
+  const idx = list.querySelectorAll('.label-item').length;
+  // Remove "empty" placeholder if present
+  const empty = list.querySelector('.empty-state');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.className = 'label-item';
+  div.innerHTML = `
+    <div class="label-id">${idx}</div>
+    <input class="label-input label-val" value="${escHtml(val)}" placeholder="label name" />
+    <button class="label-del-btn" title="Delete" onclick="deleteLabelRow(this)">✕</button>`;
+  list.appendChild(div);
+}
+
+function addLabelRow() {
+  const list = document.getElementById('labels-list');
+  _appendLabelRow(list, '');
+  // Focus the new input
+  const inputs = list.querySelectorAll('.label-val');
+  inputs[inputs.length-1]?.focus();
+}
+
+function deleteLabelRow(btn) {
+  btn.closest('.label-item').remove();
+  reIndexLabels();
+  const list = document.getElementById('labels-list');
+  if (!list.querySelectorAll('.label-item').length) {
+    list.innerHTML = '<div class="empty-state" style="padding:12px;">No labels — click + Add Label</div>';
+  }
+}
+
+function reIndexLabels() {
+  document.querySelectorAll('#labels-list .label-item').forEach((item, i) => {
+    item.querySelector('.label-id').textContent = i;
+  });
+}
+
+async function saveLabels() {
+  const model = document.getElementById('cfg-model').value;
+  if (!model) { toast('Select a model','error'); return; }
+  const labels = [...document.querySelectorAll('#labels-list .label-val')]
+    .map(i => i.value.trim()).filter(Boolean);
+  try {
+    await apiFetch(`/models/${model}/labels`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({labels})
+    });
+    toast(`${labels.length} label${labels.length!==1?'s':''} saved`,'success');
+    reIndexLabels();
+  } catch {}
+}
+
+async function saveConfig() {
+  const model = document.getElementById('cfg-model').value;
+  if (!model) { toast('Select a model','error'); return; }
+  try {
+    const cfg = JSON.parse(document.getElementById('cfg-editor').value);
+    await apiFetch(`/models/${model}/config`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(cfg)
+    });
+    toast('Config saved & model reloaded','success');
+  } catch (e) { toast('Invalid JSON: ' + e.message,'error'); }
+}
+
+async function saveInstances() {
+  const model = document.getElementById('cfg-model').value;
+  if (!model) { toast('Select a model','error'); return; }
+  try {
+    const inst = JSON.parse(document.getElementById('instances-editor').value);
+    await apiFetch(`/models/${model}/instances`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(inst)
+    });
+    toast('Instances updated','success');
+  } catch (e) { toast('Invalid JSON: ' + e.message,'error'); }
+}
+</script>
+</body>
+</html>
